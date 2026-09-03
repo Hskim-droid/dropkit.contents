@@ -1,0 +1,2 @@
+DeepSeek Harness shipped as an open-source MIT-licensed agent harness on August 13, 2026. The project entered developer preview with an "everything is a plugin" architecture.
+https://dropkit-contents.pages.dev/posts/drop-2026-09-02-kr-am/

@@ -1,0 +1,114 @@
+---
+const {
+  title = 'dropkit.contents',
+  description = 'Public contents ledger. GitHub source, Cloudflare hub.',
+} = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="alternate" type="application/rss+xml" title="dropkit.contents" href="/rss.xml" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content="https://dropkit-contents.pages.dev/og.png" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="canonical" href={Astro.url.href} />
+    <title>{title}</title>
+    <style is:global>
+      :root {
+        color-scheme: light dark;
+        --fg: #e8eaed;
+        --muted: #9aa0a6;
+        --bg: #0f1115;
+        --card: #181b22;
+        --accent: #7dd3fc;
+        --border: #2a2f3a;
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --fg: #111;
+          --muted: #5f6368;
+          --bg: #fafafa;
+          --card: #fff;
+          --accent: #0369a1;
+          --border: #e5e7eb;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+        line-height: 1.6;
+      }
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      main { max-width: 720px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+      header {
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+      }
+      header .brand { font-weight: 700; letter-spacing: -0.02em; color: var(--fg); }
+      header p { color: var(--muted); margin: 0.35rem 0 0; font-size: 0.95rem; }
+      article {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.25rem 1.4rem;
+        margin: 1rem 0;
+      }
+      article h1 { font-size: 1.35rem; margin: 0 0 0.5rem; }
+      .meta { color: var(--muted); font-size: 0.85rem; }
+      .prose :is(h1, h2, h3) { line-height: 1.25; }
+      .prose table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+        overflow-x: auto;
+        display: block;
+      }
+      .prose th,
+      .prose td {
+        border: 1px solid var(--border);
+        padding: 0.4rem 0.55rem;
+        text-align: left;
+      }
+      .prose code { font-size: 0.9em; }
+      footer {
+        margin-top: 3rem;
+        color: var(--muted);
+        font-size: 0.85rem;
+        border-top: 1px solid var(--border);
+        padding-top: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:1rem;flex-wrap:wrap">
+          <a class="brand" href="/">dropkit.contents</a>
+          <nav class="meta" style="display:flex;gap:1rem">
+            <a href="/">Drops</a>
+            <a href="/media/">Media</a>
+            <a href="/rss.xml">RSS</a>
+            <a href="/about/">About</a>
+            <a href="https://github.com/Hskim-droid/dropkit.contents">GitHub</a>
+          </nav>
+        </div>
+        <p>Ledger on GitHub. Hub here. Branches elsewhere.</p>
+      </header>
+      <slot />
+      <footer>
+        Hskim-droid/dropkit.contents
+      </footer>
+    </main>
+  </body>
+</html>

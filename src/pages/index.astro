@@ -1,0 +1,42 @@
+---
+import Base from '../layouts/Base.astro';
+import { getCollection } from 'astro:content';
+
+const posts = (await getCollection('posts', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+);
+
+function laneOf(p: (typeof posts)[number]) {
+  if (p.data.lane === 'deep' || p.data.lane === 'scoreboard') return p.data.lane;
+  if (p.data.tags.includes('deep')) return 'deep';
+  if (p.data.tags.includes('scoreboard')) return 'scoreboard';
+  return 'writing';
+}
+
+const groups = [
+  { id: 'deep', label: 'Deep cut', items: posts.filter((p) => laneOf(p) === 'deep') },
+  { id: 'scoreboard', label: 'Scoreboard', items: posts.filter((p) => laneOf(p) === 'scoreboard') },
+  { id: 'writing', label: 'Other', items: posts.filter((p) => laneOf(p) === 'writing') },
+].filter((g) => g.items.length);
+---
+<Base>
+  {
+    groups.map((g) => (
+      <section style="margin-bottom:2.25rem">
+        <h2 class="meta" style="letter-spacing:0.04em;text-transform:uppercase;margin:0 0 0.75rem">
+          {g.label}
+        </h2>
+        {g.items.map((p) => (
+          <article>
+            <h1>
+              <a href={`/posts/${p.id}/`}>{p.data.title}</a>
+            </h1>
+            <div class="meta">{p.data.pubDate.toISOString().slice(0, 10)}</div>
+            {p.data.description && <p style="margin:0.5rem 0 0">{p.data.description}</p>}
+          </article>
+        ))}
+      </section>
+    ))
+  }
+  {posts.length === 0 && <p class="meta">No drops yet.</p>}
+</Base>
