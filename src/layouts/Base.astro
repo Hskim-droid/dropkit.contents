@@ -43,10 +43,13 @@ const {
       * { box-sizing: border-box; }
       body {
         margin: 0;
-        font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo",
+          "Apple Gothic", "Noto Sans KR", "Malgun Gothic", sans-serif;
         background: var(--bg);
         color: var(--fg);
         line-height: 1.6;
+        word-break: keep-all;
+        overflow-wrap: anywhere;
       }
       a { color: var(--accent); text-decoration: none; }
       a:hover { text-decoration: underline; }
