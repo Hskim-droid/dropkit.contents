@@ -1,0 +1,24 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getCollection, render } from 'astro:content';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('posts', ({ data }) => !data.draft);
+  return posts.map((post) => ({
+    params: { slug: post.id },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+---
+<Base title={`${post.data.title} · dropkit.contents`} description={post.data.description}>
+  <p class="meta">
+    <a href="/">← Drops</a> · {post.data.pubDate.toISOString().slice(0, 10)}
+  </p>
+  <h1 style="font-size:1.6rem">{post.data.title}</h1>
+  <div class="prose">
+    <Content />
+  </div>
+</Base>

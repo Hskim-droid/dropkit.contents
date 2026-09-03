@@ -1,0 +1,2 @@
+A latency snapshot for Grok 4.20 reports 538 ms total and 513 ms TTFT. Gemini 2.5 Flash latency is 667 ms total and 506 ms TTFT, with an output cost of $0.0025 per 1K output tokens.
+https://dropkit-contents.pages.dev/posts/drop-2026-09-03-us-lunch/

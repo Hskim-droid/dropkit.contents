@@ -1,0 +1,27 @@
+---
+import fs from 'node:fs';
+import path from 'node:path';
+import Base from '../layouts/Base.astro';
+
+const dir = path.join(process.cwd(), 'public/media');
+const files = fs.existsSync(dir)
+  ? fs.readdirSync(dir).filter((n) => !n.startsWith('.') && n !== 'README.md')
+  : [];
+---
+<Base title="Media · dropkit.contents" description="Images from the contents kit.">
+  <h1 style="font-size:1.5rem">Media</h1>
+  {
+    files.length === 0 ? (
+      <p class="meta">No images in the kit yet. Video stays off git — pointer in the post when it exists.</p>
+    ) : (
+      <div style="display:grid;gap:1rem;grid-template-columns:repeat(auto-fill,minmax(180px,1fr))">
+        {files.map((n) => (
+          <a href={`/media/${n}`}>
+            <img src={`/media/${n}`} alt={n} style="width:100%;border-radius:8px;border:1px solid var(--border)" />
+          </a>
+        ))}
+      </div>
+    )
+  }
+  <p><a href="/">← Drops</a></p>
+</Base>

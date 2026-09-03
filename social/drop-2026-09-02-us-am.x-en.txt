@@ -1,0 +1,2 @@
+Two open-weight MoE models crossed 700B total parameters this cycle. One agentic benchmark crossed 80% on SWE-bench Verified. One Apache 2.0 open-weight model at 30B reached 76.0 on the same benchmark
+https://dropkit-contents.pages.dev/posts/drop-2026-09-02-us-am/
