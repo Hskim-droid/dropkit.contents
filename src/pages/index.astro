@@ -13,13 +13,31 @@ function laneOf(p: (typeof posts)[number]) {
   return 'writing';
 }
 
+const latest = posts[0];
+const rest = posts.slice(1);
 const groups = [
-  { id: 'deep', label: 'Deep cut', items: posts.filter((p) => laneOf(p) === 'deep') },
-  { id: 'scoreboard', label: 'Scoreboard', items: posts.filter((p) => laneOf(p) === 'scoreboard') },
-  { id: 'writing', label: 'Other', items: posts.filter((p) => laneOf(p) === 'writing') },
+  { id: 'deep', label: 'Deep cut', items: rest.filter((p) => laneOf(p) === 'deep') },
+  { id: 'scoreboard', label: 'Scoreboard', items: rest.filter((p) => laneOf(p) === 'scoreboard') },
+  { id: 'writing', label: 'Other', items: rest.filter((p) => laneOf(p) === 'writing') },
 ].filter((g) => g.items.length);
 ---
 <Base>
+  {
+    latest && (
+      <section style="margin-bottom:2.5rem">
+        <p class="meta" style="letter-spacing:0.04em;text-transform:uppercase;margin:0 0 0.75rem">
+          Latest drop · {laneOf(latest)}
+        </p>
+        <article>
+          <h1 style="font-size:1.55rem">
+            <a href={`/posts/${latest.id}/`}>{latest.data.title}</a>
+          </h1>
+          <div class="meta">{latest.data.pubDate.toISOString().slice(0, 10)}</div>
+          {latest.data.description && <p style="margin:0.5rem 0 0">{latest.data.description}</p>}
+        </article>
+      </section>
+    )
+  }
   {
     groups.map((g) => (
       <section style="margin-bottom:2.25rem">

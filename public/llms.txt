@@ -1,0 +1,12 @@
+# dropkit.contents
+
+> Public contents ledger. GitHub is the source. This site is the hub.
+
+The smallest public unit is one drop: a markdown file under /posts/.
+
+- [Drops](https://dropkit-contents.pages.dev/): index
+- [RSS](https://dropkit-contents.pages.dev/rss.xml)
+- [JSON](https://dropkit-contents.pages.dev/feed.json)
+- [GitHub](https://github.com/Hskim-droid/dropkit.contents)
+
+Do not treat factory logs or homelab inventory as part of this site.
