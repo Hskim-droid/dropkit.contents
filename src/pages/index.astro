@@ -1,60 +1,23 @@
 ---
 import Base from '../layouts/Base.astro';
-import { getCollection } from 'astro:content';
-
-const posts = (await getCollection('posts', ({ data }) => !data.draft)).sort(
-  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
-);
-
-function laneOf(p: (typeof posts)[number]) {
-  if (p.data.lane === 'deep' || p.data.lane === 'scoreboard') return p.data.lane;
-  if (p.data.tags.includes('deep')) return 'deep';
-  if (p.data.tags.includes('scoreboard')) return 'scoreboard';
-  return 'writing';
-}
-
-const latest = posts[0];
-const rest = posts.slice(1);
-const groups = [
-  { id: 'deep', label: 'Deep cut', items: rest.filter((p) => laneOf(p) === 'deep') },
-  { id: 'scoreboard', label: 'Scoreboard', items: rest.filter((p) => laneOf(p) === 'scoreboard') },
-  { id: 'writing', label: 'Other', items: rest.filter((p) => laneOf(p) === 'writing') },
-].filter((g) => g.items.length);
 ---
-<Base>
-  {
-    latest && (
-      <section style="margin-bottom:2.5rem">
-        <p class="meta" style="letter-spacing:0.04em;text-transform:uppercase;margin:0 0 0.75rem">
-          Latest drop · {laneOf(latest)}
-        </p>
-        <article>
-          <h1 style="font-size:1.55rem">
-            <a href={`/posts/${latest.id}/`}>{latest.data.title}</a>
-          </h1>
-          <div class="meta">{latest.data.pubDate.toISOString().slice(0, 10)}</div>
-          {latest.data.description && <p style="margin:0.5rem 0 0">{latest.data.description}</p>}
-        </article>
-      </section>
-    )
-  }
-  {
-    groups.map((g) => (
-      <section style="margin-bottom:2.25rem">
-        <h2 class="meta" style="letter-spacing:0.04em;text-transform:uppercase;margin:0 0 0.75rem">
-          {g.label}
-        </h2>
-        {g.items.map((p) => (
-          <article>
-            <h1>
-              <a href={`/posts/${p.id}/`}>{p.data.title}</a>
-            </h1>
-            <div class="meta">{p.data.pubDate.toISOString().slice(0, 10)}</div>
-            {p.data.description && <p style="margin:0.5rem 0 0">{p.data.description}</p>}
-          </article>
-        ))}
-      </section>
-    ))
-  }
-  {posts.length === 0 && <p class="meta">No drops yet.</p>}
+<Base lang="ko">
+  <section class="hero">
+    <img class="portrait" src="/hosang.png" alt="안경을 쓴 Hosang Kim의 흑백 일러스트" width="112" height="112" />
+    <p class="eyebrow">Hosang Kim · AI work notes</p>
+    <h1>업무에서 필요한 것을<br />AI와 함께 만들어갑니다.</h1>
+    <p>Codex를 활용한 문서 작업·업무 자동화 시도와 그 과정의 기록입니다.</p>
+    <p lang="en" class="meta">I use Codex to build tools for everyday work and document what I learn along the way.</p>
+    <div class="links"><a href="/work/">공개 작업 보기 →</a><a href="/about/">소개 / About</a></div>
+  </section>
+  <section aria-labelledby="work-title">
+    <h2 id="work-title">공개 프로젝트</h2>
+    <article>
+      <p class="eyebrow">Document workflows</p>
+      <h3><a href="/work/local-llm/">Local AI document tools</a></h3>
+      <p>보고서·회의록·번역을 위한 로컬 AI 도구 프로젝트입니다. 어떤 작업을 다루는지와 현재 확인 범위를 정리했습니다.</p>
+      <div class="links"><a href="/work/local-llm/">프로젝트 소개 →</a><a href="https://github.com/Hskim-droid/local-llm">GitHub 실행 안내</a></div>
+    </article>
+  </section>
+  <section class="section"><h2>AI 동향 자료</h2><p>외부 자료를 모아 정리한 기록입니다. 직접 사용한 경험과 구분해 읽을 수 있도록 별도로 모았습니다.</p><a href="/reading/">자료 모음 / Reading →</a></section>
 </Base>

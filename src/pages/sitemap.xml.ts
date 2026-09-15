@@ -4,7 +4,7 @@ import { getCollection } from 'astro:content';
 export const GET: APIRoute = async ({ site }) => {
   const base = (site?.toString() || 'https://dropkit-contents.pages.dev').replace(/\/$/, '');
   const posts = await getCollection('posts', ({ data }) => !data.draft);
-  const extra = ['/', '/about/', '/media/'];
+  const extra = ['/', '/about/', '/media/', '/reading/', '/work/', '/work/local-llm/'];
   const urls = [
     ...extra.map((p) => `${base}${p}`),
     ...posts.map((p) => `${base}/posts/${p.id}/`),

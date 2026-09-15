@@ -15,9 +15,10 @@ const { Content } = await render(post);
 ---
 <Base title={`${post.data.title} · dropkit.contents`} description={post.data.description}>
   <p class="meta">
-    <a href="/">← Drops</a> · {post.data.pubDate.toISOString().slice(0, 10)}
+    <a href="/reading/">← Reading</a> · {post.data.pubDate.toISOString().slice(0, 10)}
   </p>
   <h1 style="font-size:1.6rem">{post.data.title}</h1>
+  <p class="meta">Reading archive · External-source summary. Repeated AI judgments, including older “robust” labels, are not independent fact verification.</p>
   <div class="prose">
     <Content />
   </div>
