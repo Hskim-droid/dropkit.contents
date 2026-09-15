@@ -30,3 +30,7 @@ Lanes: **deep** (systems) · **scoreboard** (tables). Lab Notes is a writing voi
 ```bash
 npm install && npm run dev
 ```
+
+## Publication language
+
+Public pages, project introductions, and new content are written in English for a global audience. Original-language source material and historical filenames are preserved. New articles remain subject to evidence and editorial review.
