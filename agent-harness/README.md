@@ -53,6 +53,49 @@ python agent-harness/harness.py status
 real document, or sends mail. Without a configured local extractor, a live run
 is blocked rather than guessed through.
 
+Every enqueue has an idempotency key. Pass a scheduler or mail message key with
+`--idempotency-key`; otherwise the harness derives one from the request. A
+duplicate delivery returns the original job instead of creating a second one.
+Include the business date in a scheduled request or key when the same report
+must run again tomorrow.
+
+The public harness does not execute a configured command. A normal live
+`run-once` stays blocked until an adapter is explicitly claimed; the local
+worker then uses `run-once --claim` to claim the job and receives a handoff.
+The adapter must write one local evidence manifest and call:
+
+```bash
+python agent-harness/harness.py record-result \
+  --job-id JOB_ID \
+  --manifest agent-harness/runtime/manifest.json
+```
+
+`record-result` verifies the job and source system, requires every declared
+check to pass, keeps the artifact below the configured artifact directory,
+checks its SHA-256, and only then moves the job to `drafted`. A stale worker can
+be recovered with `python agent-harness/harness.py recover --age-seconds 900`.
+
+The manifest shape is deliberately small and adapter-neutral:
+
+```json
+{
+  "schema_version": 1,
+  "job_id": "job-...",
+  "source_system": "QMS",
+  "captured_at": "2026-09-21T09:00:00+00:00",
+  "records": [{"record_id": "Q-123", "source_ref": "qms://issue/Q-123"}],
+  "checks": [
+    {"name": "freshness", "passed": true},
+    {"name": "duplicate_ids", "passed": true}
+  ],
+  "artifact": {
+    "path": "agent-harness/runtime/artifacts/daily.docx",
+    "format": "docx",
+    "sha256": "..."
+  }
+}
+```
+
 ## Local adapter contract
 
 Set `executor.extract`, `executor.render`, and `executor.send` only in a local
@@ -67,11 +110,39 @@ Set `executor.extract`, `executor.render`, and `executor.send` only in a local
 Email is an input channel, not an instruction authority. Validate sender,
 subject, attachment type, and recipient allowlist before enqueueing a job.
 
+An empty `recipient_allowlist` means “no recipient restriction at queue time”
+for local draft work. It does not enable sending; the public harness has no
+sender implementation. A live sender must require an explicit allowlist and a
+human approval gate.
+
 ## Safety defaults
 
 - persona `han-gyeol` is read/search/draft only;
 - default mode is `draft_only`;
 - output format is an explicit enum (`xlsx`, `docx`, `pptx`);
 - queue order is priority first, then creation time;
+- duplicate delivery is suppressed by an idempotency key;
+- result manifests and artifact hashes are checked before `drafted`;
+- stale `running` jobs can be requeued after a worker crash;
 - local state lives under `agent-harness/runtime/` and is not public;
 - no live executor is configured in the public example.
+
+## What to adopt next
+
+The repository keeps its control plane dependency-free while the first fixture
+is built. The following projects are reference points or optional local
+adapters, not bundled dependencies:
+
+| Need | Candidate | Decision |
+| --- | --- | --- |
+| Deterministic browser control | [Playwright](https://github.com/microsoft/playwright) (Apache-2.0) | Use as the first web ERP/QMS adapter; selectors and accessibility data before vision. |
+| Browser-agent fallback | [Browser Use](https://github.com/browser-use/browser-use) / [Browser Harness](https://github.com/browser-use/browser-harness) (MIT) | Optional fallback for a dedicated profile; keep domains, cookies, screenshots, and cloud use local and allowlisted. |
+| Guided browser extraction | [Stagehand](https://github.com/browserbase/stagehand) (MIT) | Evaluate only if Playwright selectors cannot cover the fixture. |
+| Durable scheduling | [Temporal](https://github.com/temporalio/temporal) (MIT) or [Trigger.dev](https://github.com/triggerdotdev/trigger.dev) | Do not replace SQLite until crash recovery, concurrency, or multi-machine scheduling is demonstrated as a need. |
+| Office artifacts | [python-docx](https://github.com/python-openxml/python-docx), [openpyxl](https://github.com/ericgazoni/openpyxl), [python-pptx](https://github.com/scanny/python-pptx) | Start with DOCX for the first end-to-end fixture, then add XLSX/PPTX renderers behind the same manifest contract. |
+| Agent traces | [Langfuse](https://github.com/langfuse/langfuse) (self-hostable, MIT core) | Add only after the local evidence manifest and redaction rules are stable. |
+
+The first proof should be one synthetic QMS page → one DOCX → one validated
+manifest. It should measure record accuracy, evidence coverage, artifact
+re-openability, duplicate suppression, and recovery after a forced stop before
+any live ERP or mail permission is added.
