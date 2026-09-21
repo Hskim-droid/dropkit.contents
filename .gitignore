@@ -3,3 +3,7 @@ dist/
 .astro/
 .wrangler/
 .DS_Store
+__pycache__/
+*.py[cod]
+agent-harness/config.json
+agent-harness/runtime/
