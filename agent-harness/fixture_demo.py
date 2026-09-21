@@ -23,6 +23,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import harness  # noqa: E402
+from translation_pipeline import (  # noqa: E402
+    TranslationRequest,
+    build_translator,
+    translate_records,
+)
 
 
 try:
@@ -154,7 +159,17 @@ def _json_output(call: list[str]) -> dict[str, Any]:
     return json.loads(lines[-1])
 
 
-def run_demo(config_path: Path, job_id: str, html_path: Path, claim: bool = False) -> dict[str, Any]:
+def run_demo(
+    config_path: Path,
+    job_id: str,
+    html_path: Path,
+    claim: bool = False,
+    translation_source: str = "en",
+    translation_target: str | None = None,
+    translation_backend: str = "ollama",
+    translation_model: str | None = None,
+    translation_endpoint: str = "http://127.0.0.1:11434",
+) -> dict[str, Any]:
     config = harness.load_config(config_path)
     with harness.connect(config) as connection:
         row = connection.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()
@@ -179,9 +194,33 @@ def run_demo(config_path: Path, job_id: str, html_path: Path, claim: bool = Fals
     if job["status"] != "running":
         raise ValueError(f"job must be running; use --claim for a queued job (current: {job['status']})")
     source_system, captured_at, records, checks = extract_qms_screen(html_path)
+    document_records = records
+    translation_manifest = None
+    if translation_target:
+        translation_request = TranslationRequest(
+            source_language=translation_source,
+            target_language=translation_target,
+            fields=("title", "status", "owner"),
+            model=translation_model,
+        )
+        translator = build_translator(
+            translation_backend,
+            model=translation_model,
+            endpoint=translation_endpoint,
+        )
+        translation = translate_records(records, translator, translation_request)
+        document_records = translation.document_records
+        translation_manifest = translation.manifest_fragment()
+        checks.append(
+            {
+                "name": "translation_transport_scope",
+                "passed": translation_manifest["local_transport_only"] is True
+                and translation_manifest["transport_scope"] in {"in-process", "loopback-only"},
+            }
+        )
     artifact_path = harness.path_from_config(config, "artifact_dir") / f"{job_id}.docx"
-    render_docx(artifact_path, source_system, captured_at, records)
-    checks.append(reopen_docx(artifact_path, records))
+    render_docx(artifact_path, source_system, captured_at, document_records)
+    checks.append(reopen_docx(artifact_path, document_records))
     manifest_path = harness.path_from_config(config, "state_dir") / f"{job_id}.manifest.json"
     manifest = {
         "schema_version": harness.MANIFEST_VERSION,
@@ -196,6 +235,8 @@ def run_demo(config_path: Path, job_id: str, html_path: Path, claim: bool = Fals
             "sha256": sha256_file(artifact_path),
         },
     }
+    if translation_manifest is not None:
+        manifest["translation"] = translation_manifest
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     result = _json_output(
@@ -209,7 +250,14 @@ def run_demo(config_path: Path, job_id: str, html_path: Path, claim: bool = Fals
             str(manifest_path),
         ]
     )
-    return {"job_id": job_id, "records": len(records), "artifact": str(artifact_path), "manifest": str(manifest_path), "result": result}
+    return {
+        "job_id": job_id,
+        "records": len(records),
+        "translated": translation_manifest is not None,
+        "artifact": str(artifact_path),
+        "manifest": str(manifest_path),
+        "result": result,
+    }
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -218,13 +266,34 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--job-id", required=True)
     parser.add_argument("--html", default=str(ROOT / "agent-harness" / "fixtures" / "qms_daily.html"))
     parser.add_argument("--claim", action="store_true", help="claim the next queued job before extraction")
+    parser.add_argument("--translate-to", help="optional target language for the local translation stage")
+    parser.add_argument("--translate-from", default="en", help="source language for the local translation stage")
+    parser.add_argument("--translation-backend", choices=("passthrough", "ollama"), default="ollama")
+    parser.add_argument("--translation-model", help="local model name when using the ollama backend")
+    parser.add_argument("--translation-endpoint", default="http://127.0.0.1:11434")
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        print(json.dumps(run_demo(Path(args.config), args.job_id, Path(args.html), args.claim), ensure_ascii=False, indent=2))
+        print(
+            json.dumps(
+                run_demo(
+                    Path(args.config),
+                    args.job_id,
+                    Path(args.html),
+                    args.claim,
+                    translation_source=args.translate_from,
+                    translation_target=args.translate_to,
+                    translation_backend=args.translation_backend,
+                    translation_model=args.translation_model,
+                    translation_endpoint=args.translation_endpoint,
+                ),
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
         return 0
     except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
         print(f"error: {exc}", file=sys.stderr)

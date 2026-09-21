@@ -49,6 +49,7 @@ RPA 문헌에서 말하는 소프트웨어 로봇은 사람이 반복적으로 �
 | Q2. MacBook과 Windows 노트북을 어떻게 같은 계약으로 다루는가? | 플랫폼별 API는 어댑터 안에 가두고 `UiObservation`·`ActionRequest`·`ActionReceipt`만 공유한다. | Mac AX/Windows UIA 선택형 어댑터 완료 |
 | Q3. 화면 변화와 권한 오류로 잘못된 동작이 발생하지 않게 하는가? | 명시적 앱/창 루트, 현재 관찰 ID, capability·enabled·uniqueness 확인, partial/error fail-closed. | 구현·회귀검사 완료 |
 | Q4. 결과를 RPA 실행으로 재현·감사할 수 있는가? | 멱등 큐, 이벤트 원장, source reference, artifact hash, manifest 검증을 실행 경계로 둔다. | control plane 완료; 실제 메일·스케줄러는 미구현 |
+| Q5. 화면에서 읽은 자료를 어떻게 로컬 번역하고 문서화하는가? | 원문 보존 → 로컬 모델 번역 → 선택 포맷 렌더 → 재오픈 검증의 분리된 단계로 둔다. | 번역 adapter·fixture DOCX 연결 완료; 실제 모델/포맷 확장은 별도 |
 
 ## 3. 참고 프로젝트와 논문 → 설계 결정
 
@@ -81,6 +82,22 @@ RPA 문헌에서 말하는 소프트웨어 로봇은 사람이 반복적으로 �
 
 상용 RPA의 참고 사례로는 [Power Automate desktop UI automation](https://learn.microsoft.com/en-us/power-automate/desktop-flows/desktop-automation)을 확인했다. UI element를 캡처하고 foreground window에서 조작하는 운영 모델은 참고하지만, 이 저장소는 상용 제품·라이선스·클라우드에 종속되지 않는다.
 
+### 3.4 로컬 모델 번역과 산출물 경계
+
+| 참고 | 공개 코드에서 확인한 구조 | 이 저장소의 반영 | 반영하지 않은 것 |
+| --- | --- | --- | --- |
+| [`Hskim-droid/local-llm`](https://github.com/Hskim-droid/local-llm) 및 [`hardware.py`](https://raw.githubusercontent.com/Hskim-droid/local-llm/main/hardware.py) | 로컬 하드웨어(RAM·가용 메모리·GPU·swap)를 읽어 `gram16`·`gram32`·`mac24` 같은 프로필을 선택하는 부트스트랩 구조를 둔다. | `bootstrap.py`가 개인 식별자 없이 호스트 capability를 기록하고, 모델 선택은 별도 local-engine 설정으로 남긴다. | 공개 저장소의 프로필 숫자나 특정 모델 크기를 모든 사용자의 권장값으로 복사하지 않는다. 실제 장치에서 다시 측정한다. |
+| [`ollama_client.py`](https://raw.githubusercontent.com/Hskim-droid/local-llm/main/ollama_client.py) | localhost Ollama API에서 모델을 선택·pull하고 chat JSON을 호출한다. | `translation_pipeline.py`에 loopback-only Ollama-compatible adapter를 두고, 응답 JSON이 계약과 다르면 중단한다. 서버가 `OLLAMA_NO_CLOUD=1`로 재시작되어야 하며 cloud-tagged model name도 거부한다. manifest에는 loopback 전송과 모델 서버 실행 위치를 별도 기록하며 원문을 외부 endpoint로 보내는 fallback은 없다. | Ollama 설치·모델 weight 다운로드·cloud API를 기본 부트스트랩에 포함하지 않는다. |
+| [`render.py`](https://raw.githubusercontent.com/Hskim-droid/local-llm/main/render.py), [`schema.json`](https://raw.githubusercontent.com/Hskim-droid/local-llm/main/schema.json), [`packs/README.md`](https://raw.githubusercontent.com/Hskim-droid/local-llm/main/packs/README.md) | 구조화된 content JSON을 고정 템플릿 DOCX로 만들고, report/minutes/translation pack을 구분한다. renderer는 모델 호출과 분리된다. | `TranslationBatch`가 원문·번역문·source_ref를 함께 보존하고, `fixture_demo.py`가 번역된 view만 DOCX에 넣은 뒤 reopen/cell 검사를 수행한다. manifest에는 번역 backend·언어·필드별 증거를 추가한다. | 현재 fixture는 DOCX 하나만 렌더링한다. XLSX/PPTX renderer, 실제 pack schema 호환, 음성/vision/whisper 경로는 아직 연결하지 않는다. |
+
+이 참고 프로젝트와의 통합은 실행 파일을 복사하는 방식이 아니라 계약을
+분리하는 방식이다. UI 어댑터가 수집한 원본 레코드는 `records`로 남고,
+번역 단계는 선택된 텍스트 필드만 local model에 보내 `translation` evidence를
+만든다. renderer는 `document_records`를 사용하므로 번역 실패가 원본 증거를
+덮어쓰거나 UI 화면에 쓰기 동작을 일으키지 않는다. `PassthroughTranslator`는
+모델이 없는 fixture 검사용이고, production 경로에서는 `OllamaTranslator` 또는
+검토된 다른 loopback engine을 명시적으로 선택해야 한다.
+
 ## 4. 근거에서 코드로 이어지는 추적표
 
 | 설계 요구 | 구현 위치 | 검증 | 상태 |
@@ -93,6 +110,8 @@ RPA 문헌에서 말하는 소프트웨어 로봇은 사람이 반복적으로 �
 | partial/error tree에서 native action 차단 | `native_adapters.py` | transactional cache tests | 완료 |
 | queue priority·idempotency·stale recovery | `agent-harness/harness.py` | `tests/test_harness.py` | 완료 |
 | artifact format·hash·manifest check | `harness.py`, `fixture_demo.py` | DOCX reopen/hash tests | 완료 |
+| local translation boundary | `translation_pipeline.py`, `fixture_demo.py` | passthrough evidence, loopback endpoint, invalid JSON, translated DOCX fixture | 완료 |
+| host capability mapping | `bootstrap.py` | report identity redaction, allowlisted plan, explicit network gate | 완료 |
 | 승인 전송·메일·스케줄 | local config interface only | 실제 sender 없음 | 미구현 |
 | native table extraction | adapter boundary only | browser table만 있음 | 미구현 |
 | process mining 기반 후보 발굴 | events 원장만 있음 | 실제 사용자 event log 없음 | 미구현 |
@@ -111,7 +130,8 @@ flowchart LR
     A --> X[Playwright / macOS AX / Windows UIA]
     X --> E[ActionReceipt + event log]
     E --> R[read and validate records]
-    R --> M[one artifact + manifest + SHA-256]
+    R --> L[local translation / normalization]
+    L --> M[one artifact + manifest + SHA-256]
     M -.-> H[planned human approval gate]
     H -.-> S[planned local sender adapter]
     I -.-> T[planned scheduler / validated email intake]
@@ -130,8 +150,10 @@ flowchart LR
   observation generation을 확인하며, browser의 forbidden menu 정책을 자동으로
   상속하지 않는다.
 - 현재 DOCX fixture 결과는 허용된 output format 하나와 hash가 있는 manifest로
-  검증한다. generic probe와 native adapter의 결과를 queue·manifest에 연결하는
-  통합은 별도 작업이다.
+  검증한다. 번역을 켜면 원문 레코드와 필드별 번역 evidence를 manifest에 남기고,
+  번역된 view를 문서에 넣은 뒤 같은 reopen 검사로 확인한다. generic probe와
+  native adapter의 결과를 queue·manifest에 연결하는 통합, 그리고 XLSX/PPTX
+  renderer는 별도 작업이다.
 
 ## 6. 실제 개선 항목과 종료 조건
 
@@ -147,6 +169,16 @@ flowchart LR
 모든 트리 변경을 감시한다는 뜻은 아니며, 다른 관찰 세대의 요청을 거부한다는
 뜻이다.
 
+UI read 이후에 붙는 `translation_pipeline.py`도 같은 fail-closed 원칙을
+사용한다. 번역기는 `local_only=True` 내부 계약을 선언해야 하고, manifest는
+`local_transport_only`와 `transport_scope`를 따로 기록한다. Ollama-compatible
+endpoint는 `localhost`, `127.0.0.1`, `::1`만 허용하고 proxy·redirect를 차단한다. 응답은
+`{"translation": "..."}` JSON 계약을 지켜야 하며, 그렇지 않으면 artifact를
+만들지 않는다. manifest에는 loopback 전송 확인과 모델 서버 실행 위치 미검증을
+구분해 기록한다. 원문과 번역문은 모두 manifest의 필드별 evidence로 남기고,
+renderer가 사용할 복사본만 평탄화한다. 따라서 현장 화면을 읽는 권한과
+모델을 실행하는 권한, 외부 발송 권한을 한 단계로 합치지 않는다.
+
 ### 다음에 구현할 순서
 
 | 순서 | 최소 시험 | 성공 기준 | 중단/전환 조건 |
@@ -156,6 +188,7 @@ flowchart LR
 | 3. action/postcondition evaluator | click 뒤 observation diff 또는 expected state 검증 | receipt가 “호출됨”과 “업무 상태가 바뀜”을 구분 | 상태 확인 불가능하면 draft-only 유지 |
 | 4. event-log benchmark | fixture와 synthetic human trajectory의 action·latency 수집 | 성공률·step 수·ambiguity·recovery를 버전별 비교 | 실제 업무 로그 권한/비식별화가 없으면 공개 dataset만 사용 |
 | 5. real-host validation | Mac AX permission과 Windows UIA window root 각각 1개씩 | 실제 창에서 observe→pinned action→artifact manifest 통과 | 권한·control pattern 불안정 시 native 실행은 계속 optional로 둠 |
+| 6. local model validation | 고정 레코드와 loopback mock/실제 모델 1회 | 원문 보존·번역 evidence·DOCX reopen이 일치하고 endpoint가 외부 주소를 거부 | 모델 JSON 불안정·메모리 부족이면 passthrough/사람 검토로 중단 |
 
 이 표의 항목은 구현 승인 목록이 아니라, 현재 범위에서 확인된 공백과 작은
 검증 단위다. 실제 ERP·메일·승인 권한을 켜기 전에 각 종료 조건을 충족해야 한다.

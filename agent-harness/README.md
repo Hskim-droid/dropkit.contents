@@ -75,6 +75,52 @@ check to pass, keeps the artifact below the configured artifact directory,
 checks its SHA-256, and only then moves the job to `drafted`. A stale worker can
 be recovered with `python agent-harness/harness.py recover --age-seconds 900`.
 
+## Host mapping and local translation
+
+Run the host probe before installing anything:
+
+```bash
+python3 agent-harness/bootstrap.py report
+python3 agent-harness/bootstrap.py plan --profile all
+```
+
+The report contains only operating-system, Python, package-manager, browser,
+module, and capability facts. It does not collect a hostname, username,
+credentials, cookies, or a desktop-wide window list. `apply` accepts only the
+repository's fixture requirements, Playwright Chromium, or the matching
+optional macOS/Windows binding, and requires the explicit
+`--allow-network` flag:
+
+```bash
+python3 agent-harness/bootstrap.py apply --profile browser --allow-network
+```
+
+The plan may include the local absolute path to the fixture requirements; redact
+that path before sharing a plan outside the machine.
+
+After a UI adapter returns records, the optional translation stage runs locally
+and keeps source and translated values together:
+
+```bash
+OLLAMA_NO_CLOUD=1 python3 agent-harness/translation_pipeline.py \
+  --input records.json --output translated.json \
+  --from ko --to en --fields title,status,owner \
+  --backend ollama --model <local-model>
+```
+
+The Ollama-compatible adapter accepts only a loopback endpoint, disables proxy
+and redirect handling, and requires the Ollama server to be started with
+`OLLAMA_NO_CLOUD=1` and restarted before use. The client applies the same
+environment guard and rejects cloud-tagged model names, but cannot verify the
+configuration of an already-running server. The manifest records loopback
+transport separately from the model server's execution location. It fails
+closed on a malformed response and has no client-side cloud fallback. The fixture can
+exercise the same stage without a model using `--translate-to en
+--translation-backend passthrough`. A document renderer consumes the translated
+view while the manifest retains the original records and per-field translation
+evidence. This keeps UI extraction, translation, and DOCX/XLSX/PPTX rendering as
+separate replaceable stages.
+
 The manifest shape is deliberately small and adapter-neutral:
 
 ```json
@@ -141,6 +187,7 @@ adapters, not bundled dependencies:
 | Durable scheduling | [Temporal](https://github.com/temporalio/temporal) (MIT) or [Trigger.dev](https://github.com/triggerdotdev/trigger.dev) | Do not replace SQLite until crash recovery, concurrency, or multi-machine scheduling is demonstrated as a need. |
 | Office artifacts | [python-docx](https://github.com/python-openxml/python-docx), [openpyxl](https://github.com/ericgazoni/openpyxl), [python-pptx](https://github.com/scanny/python-pptx) | Start with DOCX for the first end-to-end fixture, then add XLSX/PPTX renderers behind the same manifest contract. |
 | Agent traces | [Langfuse](https://github.com/langfuse/langfuse) (self-hostable, MIT core) | Add only after the local evidence manifest and redaction rules are stable. |
+| Local model translation | [`Hskim-droid/local-llm`](https://github.com/Hskim-droid/local-llm) | Use its hardware/profile and local-engine ideas as a sibling integration; keep this harness's loopback translator and artifact contract independent. |
 
 The first proof should be one synthetic QMS page → one DOCX → one validated
 manifest. It should measure record accuracy, evidence coverage, artifact
@@ -227,6 +274,12 @@ falls back to desktop-wide clicking.
 The native adapter tests use fake AX/UIA trees. Real host permission grants,
 window discovery, and application-specific control patterns still require a
 MacBook or Windows host validation pass.
+
+`bootstrap.py` is a bounded capability mapper, not a general-purpose installer:
+model weights, ERP connectors, mail credentials, and OS accessibility grants
+remain explicit operator decisions. The local-llm sibling project can supply a
+hardware-selected engine/model, but the public harness does not silently pull
+large model files or assume that Ollama is installed.
 
 The design lineage is recorded in
 [`RPA_REFERENCE_LINEAGE.md`](RPA_REFERENCE_LINEAGE.md). It maps the RPA reviews,
