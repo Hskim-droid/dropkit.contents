@@ -31,6 +31,11 @@
   기존 공개 기준은 `f1e8234` (`Document RPA lineage and pin UI actions`), 이전
   native adapter 커밋 `d0b496e`와 generic probe 커밋 `d757efe` 포함. 원격:
   `Hskim-droid/dropkit.contents`.
+- 공개 레포 경계 정리: 루트 `README.md`에 사이트 허브·`agent-harness`·근거 문서의
+  진입점을 추가하고, 하네스 README 상단에 합성 fixture·loopback 번역·단일
+  DOCX/XLSX/PPTX 검증만 공개된 실험 범위임을 명시했다. 로컬 커밋은 `1698a39`
+  (`Clarify public repository boundaries`)이며, HTTPS GitHub 인증 실패로 원격에는
+  아직 push하지 못했다.
 - 남은 제한: 실제 macOS/Windows 권한·창 연결 검증은 각 호스트가 필요하다.
   Linux AT-SPI 어댑터, 접근성 이름/라벨이 없는 화면의 OCR/비전 fallback,
   공통 native semantic planner·table extractor·postcondition evaluator,
@@ -41,3 +46,6 @@
 - 사용자 미커밋 파일: `src/pages/sitemap.xml.ts`, `src/pages/work/index.astro`,
   `public/examples/`, `src/pages/work/scan-recovery.astro`는 건드리거나 푸시하지
   않았다.
+- 공개 운영 후속 판단: `agent-harness`를 독립 공개 레포로 분리할지, LICENSE·
+  SECURITY·CONTRIBUTING·Python CI를 어떤 범위로 추가할지는 라이선스와 외부
+  기여 수용 여부를 정한 뒤 결정한다.
