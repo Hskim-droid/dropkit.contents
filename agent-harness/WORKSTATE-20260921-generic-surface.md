@@ -26,8 +26,8 @@
   전제)·잘못된 JSON 중단·translated DOCX/XLSX/PPTX reopen 검사·추가 행/표
   거부를
   포함한다.
-- 공개 커밋: 출력 포맷 통합 커밋으로 갱신 예정. 기존 기준은 `bfa0f95`
-  (`Add host bootstrap and local translation boundary`),
+- 공개 커밋: `4b00856` (`Support user-selected office output formats`), 기존 기준은
+  `bfa0f95` (`Add host bootstrap and local translation boundary`),
   기존 공개 기준은 `f1e8234` (`Document RPA lineage and pin UI actions`), 이전
   native adapter 커밋 `d0b496e`와 generic probe 커밋 `d757efe` 포함. 원격:
   `Hskim-droid/dropkit.contents`.
