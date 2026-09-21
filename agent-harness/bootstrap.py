@@ -104,6 +104,8 @@ def collect_report() -> EnvironmentReport:
     modules = {
         "playwright": module_available("playwright"),
         "docx": module_available("docx"),
+        "openpyxl": module_available("openpyxl"),
+        "pptx": module_available("pptx"),
         "Quartz": module_available("Quartz"),
         "ApplicationServices": module_available("ApplicationServices"),
         "pywinauto": module_available("pywinauto"),
@@ -133,6 +135,8 @@ def collect_report() -> EnvironmentReport:
         "windows_uia_binding": os_name == "windows" and modules["pywinauto"],
         "linux_atspi_binding": os_name == "linux" and modules["atspi"],
         "docx_renderer": modules["docx"],
+        "xlsx_renderer": modules["openpyxl"],
+        "pptx_renderer": modules["pptx"],
         "local_model_engine": any(local_model_commands.values()),
     }
     return EnvironmentReport(
@@ -164,7 +168,7 @@ def build_plan(report: EnvironmentReport, profile: str, root: Path | None = None
     needs_native = profile in {"native", "all"}
     needs_local_model = profile in {"local-model", "all"}
 
-    if needs_browser and not (report.modules["playwright"] and report.modules["docx"]):
+    if needs_browser and not all(report.modules[name] for name in ("playwright", "docx", "openpyxl", "pptx")):
         steps.append(
             PlanStep(
                 "python-fixture-dependencies",

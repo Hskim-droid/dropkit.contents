@@ -26,11 +26,11 @@ def report_for(**overrides):
         "machine": "arm64",
         "python_version": "3.13.0",
         "package_managers": {"python": True, "uv": False, "brew": True, "winget": False},
-        "modules": {"playwright": False, "docx": False, "Quartz": False, "ApplicationServices": False, "pywinauto": False, "atspi": False},
+        "modules": {"playwright": False, "docx": False, "openpyxl": False, "pptx": False, "Quartz": False, "ApplicationServices": False, "pywinauto": False, "atspi": False},
         "local_model_commands": {"ollama": False, "llama_cli": False, "llama_server": False},
         "browser_channels": {"chromium": False, "chrome": True, "edge": False, "firefox": False, "webkit": False},
         "browser_cache": False,
-        "capabilities": {"browser_playwright": False, "macos_ax_binding": False, "windows_uia_binding": False, "linux_atspi_binding": False, "docx_renderer": False, "local_model_engine": False},
+        "capabilities": {"browser_playwright": False, "macos_ax_binding": False, "windows_uia_binding": False, "linux_atspi_binding": False, "docx_renderer": False, "xlsx_renderer": False, "pptx_renderer": False, "local_model_engine": False},
     }
     values.update(overrides)
     return EnvironmentReport(**values)
@@ -64,8 +64,8 @@ class BootstrapTests(unittest.TestCase):
     def test_linux_native_plan_requires_manual_review(self):
         report = report_for(
             os_name="linux",
-            modules={"playwright": True, "docx": True, "Quartz": False, "ApplicationServices": False, "pywinauto": False, "atspi": False},
-            capabilities={"browser_playwright": True, "macos_ax_binding": False, "windows_uia_binding": False, "linux_atspi_binding": False, "docx_renderer": True},
+            modules={"playwright": True, "docx": True, "openpyxl": True, "pptx": True, "Quartz": False, "ApplicationServices": False, "pywinauto": False, "atspi": False},
+            capabilities={"browser_playwright": True, "macos_ax_binding": False, "windows_uia_binding": False, "linux_atspi_binding": False, "docx_renderer": True, "xlsx_renderer": True, "pptx_renderer": True, "local_model_engine": False},
         )
         steps = build_plan(report, "native", ROOT.parent)
         self.assertEqual(steps[0].status, "manual-review")
@@ -103,7 +103,7 @@ class BootstrapTests(unittest.TestCase):
     def test_local_model_engine_is_reported_as_ready_when_detected(self):
         report = report_for(
             local_model_commands={"ollama": True, "llama_cli": False, "llama_server": False},
-            capabilities={"browser_playwright": False, "macos_ax_binding": False, "windows_uia_binding": False, "linux_atspi_binding": False, "docx_renderer": False, "local_model_engine": True},
+            capabilities={"browser_playwright": False, "macos_ax_binding": False, "windows_uia_binding": False, "linux_atspi_binding": False, "docx_renderer": False, "xlsx_renderer": False, "pptx_renderer": False, "local_model_engine": True},
         )
         steps = build_plan(report, "local-model", ROOT.parent)
         self.assertEqual(steps[0].status, "ready")

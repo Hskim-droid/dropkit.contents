@@ -147,7 +147,14 @@ class FixtureDemoTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 fixture_demo.extract_qms_screen(html)
 
-    def test_fixture_rejects_non_docx_without_claiming_it(self):
+    def test_fixture_renders_requested_xlsx_and_pptx(self):
+        class PrefixTranslator(PassthroughTranslator):
+            backend_name = "deterministic-fixture"
+            model_name = "fixture-model"
+
+            def translate_text(self, text, request):
+                return f"[EN] {text}"
+
         with tempfile.TemporaryDirectory() as temp:
             temp_path = Path(temp)
             config_path = temp_path / "config.json"
@@ -159,37 +166,67 @@ class FixtureDemoTests(unittest.TestCase):
                         "mode": "draft_only",
                         "state_dir": str(temp_path / "state"),
                         "artifact_dir": str(temp_path / "artifacts"),
-                        "default_output_format": "xlsx",
+                        "default_output_format": "docx",
                         "recipient_allowlist": [],
                         "executor": {"extract": "fixture-demo", "render": None, "send": None},
                     }
                 ),
                 encoding="utf-8",
             )
-            self.assertEqual(
-                harness.main(
-                    [
-                        "--config",
-                        str(config_path),
-                        "enqueue",
-                        "--source-system",
-                        "QMS",
-                        "--request",
-                        "synthetic xlsx report 2026-09-21",
-                        "--output-format",
-                        "xlsx",
-                    ]
-                ),
-                0,
-            )
-            config = harness.load_config(config_path)
-            with harness.connect(config) as connection:
-                job_id = connection.execute("SELECT id FROM jobs").fetchone()[0]
-            with self.assertRaises(ValueError):
-                fixture_demo.run_demo(config_path, job_id, ROOT / "fixtures" / "qms_daily.html", claim=True)
-            with harness.connect(config) as connection:
-                status = connection.execute("SELECT status FROM jobs WHERE id=?", (job_id,)).fetchone()[0]
-            self.assertEqual(status, "queued")
+            for output_format in ("xlsx", "pptx"):
+                self.assertEqual(
+                    harness.main(
+                        [
+                            "--config",
+                            str(config_path),
+                            "enqueue",
+                            "--source-system",
+                            "QMS",
+                            "--request",
+                            f"synthetic {output_format} report 2026-09-21",
+                            "--output-format",
+                            output_format,
+                        ]
+                    ),
+                    0,
+                )
+                config = harness.load_config(config_path)
+                with harness.connect(config) as connection:
+                    job_id = connection.execute("SELECT id FROM jobs WHERE output_format=?", (output_format,)).fetchone()[0]
+                with mock.patch("fixture_demo.build_translator", return_value=PrefixTranslator()):
+                    result = fixture_demo.run_demo(
+                        config_path,
+                        job_id,
+                        ROOT / "fixtures" / "qms_daily.html",
+                        claim=True,
+                        translation_target="en",
+                        translation_backend="passthrough",
+                    )
+                self.assertEqual(result["format"], output_format)
+                self.assertTrue(Path(result["artifact"]).is_file())
+                self.assertEqual(Path(result["artifact"]).suffix, f".{output_format}")
+                manifest = json.loads(Path(result["manifest"]).read_text(encoding="utf-8"))
+                self.assertNotEqual(
+                    manifest["translation"]["items"][0]["fields"]["title"]["source"],
+                    manifest["translation"]["items"][0]["fields"]["title"]["translated"],
+                )
+                if output_format == "xlsx":
+                    from openpyxl import load_workbook
+
+                    workbook = load_workbook(result["artifact"], read_only=True)
+                    self.assertIn("Evidence", workbook.sheetnames)
+                    self.assertEqual(workbook["Report"]["B5"].value, "[EN] Incoming inspection hold")
+                    workbook.close()
+                else:
+                    from pptx import Presentation
+
+                    presentation = Presentation(result["artifact"])
+                    self.assertGreaterEqual(len(presentation.slides), 2)
+                    table = next(shape.table for shape in presentation.slides[1].shapes if shape.has_table)
+                    self.assertEqual(table.cell(1, 1).text, "[EN] Incoming inspection hold")
+                with harness.connect(config) as connection:
+                    status = connection.execute("SELECT status FROM jobs WHERE id=?", (job_id,)).fetchone()[0]
+                self.assertEqual(status, "drafted")
 
 
 if __name__ == "__main__":

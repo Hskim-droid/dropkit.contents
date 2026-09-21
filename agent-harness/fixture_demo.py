@@ -3,8 +3,8 @@
 
 This is a development fixture, not a production connector. It exercises the
 same boundaries a local ERP/QMS adapter must use: read a dedicated browser
-page, normalize records, render exactly one DOCX, and submit a hashed manifest
-to the draft-first harness.
+page, normalize records, render exactly one requested office format, and submit
+a hashed manifest to the draft-first harness.
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import harness  # noqa: E402
+from document_renderers import reopen_artifact, render_artifact  # noqa: E402
 from translation_pipeline import (  # noqa: E402
     TranslationRequest,
     build_translator,
@@ -109,36 +110,11 @@ def render_docx(
     captured_at: str,
     records: list[dict[str, Any]],
 ) -> None:
-    require_dependencies()
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    document = Document()
-    document.add_heading("QMS Daily Draft", level=1)
-    document.add_paragraph(f"Source: {source_system} | Captured: {captured_at}")
-    document.add_paragraph("Draft only. No ERP/QMS write or external send was performed.")
-    table = document.add_table(rows=1, cols=len(EXPECTED_COLUMNS))
-    table.style = "Table Grid"
-    for cell, heading in zip(table.rows[0].cells, EXPECTED_COLUMNS):
-        cell.text = heading
-    for record in records:
-        cells = table.add_row().cells
-        for cell, heading in zip(cells, EXPECTED_COLUMNS):
-            cell.text = record[heading]
-    document.add_heading("Evidence", level=2)
-    for record in records:
-        document.add_paragraph(f"{record['record_id']}: {record['source_ref']}")
-    document.save(output_path)
+    render_artifact(output_path, "docx", source_system, captured_at, EXPECTED_COLUMNS, records)
 
 
 def reopen_docx(output_path: Path, records: list[dict[str, Any]]) -> dict[str, Any]:
-    require_dependencies()
-    document = Document(output_path)
-    table_rows = len(document.tables[0].rows) if document.tables else 0
-    cell_values = []
-    if document.tables:
-        cell_values = [[cell.text.strip() for cell in row.cells] for row in document.tables[0].rows[1:]]
-    expected_values = [[record[column] for column in EXPECTED_COLUMNS] for record in records]
-    passed = bool(document.paragraphs) and table_rows == len(records) + 1 and cell_values == expected_values
-    return {"name": "docx_reopen_and_cell_values", "passed": passed}
+    return reopen_artifact(output_path, "docx", EXPECTED_COLUMNS, records)
 
 
 def sha256_file(path: Path) -> str:
@@ -176,8 +152,6 @@ def run_demo(
         if row is None:
             raise ValueError(f"unknown job: {job_id}")
         initial_job = harness.row_json(row)
-    if initial_job["output_format"] != "docx":
-        raise ValueError("fixture_demo only supports a DOCX job")
     if initial_job["source_system"] != "QMS":
         raise ValueError("fixture_demo only supports the QMS source system")
     if claim:
@@ -218,9 +192,10 @@ def run_demo(
                 and translation_manifest["transport_scope"] in {"in-process", "loopback-only"},
             }
         )
-    artifact_path = harness.path_from_config(config, "artifact_dir") / f"{job_id}.docx"
-    render_docx(artifact_path, source_system, captured_at, document_records)
-    checks.append(reopen_docx(artifact_path, document_records))
+    output_format = initial_job["output_format"]
+    artifact_path = harness.path_from_config(config, "artifact_dir") / f"{job_id}.{output_format}"
+    render_artifact(artifact_path, output_format, source_system, captured_at, EXPECTED_COLUMNS, document_records)
+    checks.append(reopen_artifact(artifact_path, output_format, EXPECTED_COLUMNS, document_records))
     manifest_path = harness.path_from_config(config, "state_dir") / f"{job_id}.manifest.json"
     manifest = {
         "schema_version": harness.MANIFEST_VERSION,
@@ -231,7 +206,7 @@ def run_demo(
         "checks": checks,
         "artifact": {
             "path": str(artifact_path),
-            "format": "docx",
+            "format": output_format,
             "sha256": sha256_file(artifact_path),
         },
     }
@@ -253,6 +228,7 @@ def run_demo(
     return {
         "job_id": job_id,
         "records": len(records),
+        "format": output_format,
         "translated": translation_manifest is not None,
         "artifact": str(artifact_path),
         "manifest": str(manifest_path),
@@ -261,7 +237,7 @@ def run_demo(
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Synthetic QMS browser-to-DOCX adapter")
+    parser = argparse.ArgumentParser(description="Synthetic QMS browser-to-office-artifact adapter")
     parser.add_argument("--config", required=True)
     parser.add_argument("--job-id", required=True)
     parser.add_argument("--html", default=str(ROOT / "agent-harness" / "fixtures" / "qms_daily.html"))

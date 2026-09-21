@@ -85,7 +85,7 @@ python3 agent-harness/bootstrap.py plan --profile all
 ```
 
 The report contains only operating-system, Python, package-manager, browser,
-module, and capability facts. It does not collect a hostname, username,
+module, renderer, and capability facts. It does not collect a hostname, username,
 credentials, cookies, or a desktop-wide window list. `apply` accepts only the
 repository's fixture requirements, Playwright Chromium, or the matching
 optional macOS/Windows binding, and requires the explicit
@@ -120,6 +120,31 @@ exercise the same stage without a model using `--translate-to en
 view while the manifest retains the original records and per-field translation
 evidence. This keeps UI extraction, translation, and DOCX/XLSX/PPTX rendering as
 separate replaceable stages.
+
+## User-selected output format
+
+The queue already carries one explicit `output_format`; the local renderer now
+honors that value for all three formats:
+
+```bash
+python3 agent-harness/harness.py enqueue \
+  --source-system QMS \
+  --request "전일 미처리 품질 이슈" \
+  --output-format xlsx
+```
+
+`document_renderers.py` uses the same normalized columns and records for DOCX,
+XLSX, and PPTX. Each output has a format-specific reopen check for headers and
+record cells before its manifest can be recorded. XLSX also receives an
+`Evidence` sheet; PPTX receives a summary slide, a records table, and evidence
+references. A job produces exactly the requested format, never a second hidden
+copy. The renderer is a local artifact stage: it does not write back to the UI
+or send mail.
+
+The PPTX renderer currently produces a basic summary slide and table slide. It
+does not yet paginate large datasets, solve text overflow for long values, or
+perform an app-level visual comparison; those are template and host validation
+work after the format contract is proven.
 
 The manifest shape is deliberately small and adapter-neutral:
 
@@ -185,19 +210,19 @@ adapters, not bundled dependencies:
 | Browser-agent fallback | [Browser Use](https://github.com/browser-use/browser-use) / [Browser Harness](https://github.com/browser-use/browser-harness) (MIT) | Optional fallback for a dedicated profile; keep domains, cookies, screenshots, and cloud use local and allowlisted. |
 | Guided browser extraction | [Stagehand](https://github.com/browserbase/stagehand) (MIT) | Evaluate only if Playwright selectors cannot cover the fixture. |
 | Durable scheduling | [Temporal](https://github.com/temporalio/temporal) (MIT) or [Trigger.dev](https://github.com/triggerdotdev/trigger.dev) | Do not replace SQLite until crash recovery, concurrency, or multi-machine scheduling is demonstrated as a need. |
-| Office artifacts | [python-docx](https://github.com/python-openxml/python-docx), [openpyxl](https://github.com/ericgazoni/openpyxl), [python-pptx](https://github.com/scanny/python-pptx) | Start with DOCX for the first end-to-end fixture, then add XLSX/PPTX renderers behind the same manifest contract. |
+| Office artifacts | [python-docx](https://github.com/python-openxml/python-docx), [openpyxl](https://github.com/ericgazoni/openpyxl), [python-pptx](https://github.com/scanny/python-pptx) | Use one renderer contract for DOCX/XLSX/PPTX and reopen each artifact before the manifest is accepted. |
 | Agent traces | [Langfuse](https://github.com/langfuse/langfuse) (self-hostable, MIT core) | Add only after the local evidence manifest and redaction rules are stable. |
 | Local model translation | [`Hskim-droid/local-llm`](https://github.com/Hskim-droid/local-llm) | Use its hardware/profile and local-engine ideas as a sibling integration; keep this harness's loopback translator and artifact contract independent. |
 
-The first proof should be one synthetic QMS page → one DOCX → one validated
-manifest. It should measure record accuracy, evidence coverage, artifact
+The synthetic proof exercises the same QMS records through DOCX, XLSX, and PPTX
+one at a time. It measures record accuracy, evidence coverage, artifact
 re-openability, duplicate suppression, and recovery after a forced stop before
 any live ERP or mail permission is added.
 
 ## Run the synthetic browser proof
 
 The fixture is the only adapter included in the public repository. It uses a
-local HTML page, headless Chromium, and a local DOCX renderer; it contains no
+local HTML page, headless Chromium, and local office renderers; it contains no
 business data or credentials.
 
 ```bash
@@ -207,7 +232,8 @@ python3 agent-harness/harness.py init
 ```
 
 Set the local, ignored `agent-harness/config.json` value
-`executor.extract` to `fixture-demo`, enqueue one QMS/DOCX job, and run:
+`executor.extract` to `fixture-demo`, enqueue one QMS job with `--output-format
+docx`, `xlsx`, or `pptx`, and run:
 
 ```bash
 python3 agent-harness/fixture_demo.py \
@@ -217,10 +243,10 @@ python3 agent-harness/fixture_demo.py \
 ```
 
 The command reads `fixtures/qms_daily.html` through Chromium, validates three
-records and their source references, creates one DOCX, reopens it and compares
-every table cell with the extracted records, writes the manifest, and moves the
-specified queued job to `drafted`. It rejects XLSX/PPTX and non-QMS jobs before
-claiming them. It never sends email or writes to an ERP/QMS system.
+records and their source references, creates exactly the requested office
+artifact, reopens it and compares every record cell with the extracted view,
+writes the manifest, and moves the specified queued job to `drafted`. It never
+sends email or writes to an ERP/QMS system.
 
 ## Generic surface probe
 

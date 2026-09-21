@@ -88,7 +88,7 @@ RPA 문헌에서 말하는 소프트웨어 로봇은 사람이 반복적으로 �
 | --- | --- | --- | --- |
 | [`Hskim-droid/local-llm`](https://github.com/Hskim-droid/local-llm) 및 [`hardware.py`](https://raw.githubusercontent.com/Hskim-droid/local-llm/main/hardware.py) | 로컬 하드웨어(RAM·가용 메모리·GPU·swap)를 읽어 `gram16`·`gram32`·`mac24` 같은 프로필을 선택하는 부트스트랩 구조를 둔다. | `bootstrap.py`가 개인 식별자 없이 호스트 capability를 기록하고, 모델 선택은 별도 local-engine 설정으로 남긴다. | 공개 저장소의 프로필 숫자나 특정 모델 크기를 모든 사용자의 권장값으로 복사하지 않는다. 실제 장치에서 다시 측정한다. |
 | [`ollama_client.py`](https://raw.githubusercontent.com/Hskim-droid/local-llm/main/ollama_client.py) | localhost Ollama API에서 모델을 선택·pull하고 chat JSON을 호출한다. | `translation_pipeline.py`에 loopback-only Ollama-compatible adapter를 두고, 응답 JSON이 계약과 다르면 중단한다. 서버가 `OLLAMA_NO_CLOUD=1`로 재시작되어야 하며 cloud-tagged model name도 거부한다. manifest에는 loopback 전송과 모델 서버 실행 위치를 별도 기록하며 원문을 외부 endpoint로 보내는 fallback은 없다. | Ollama 설치·모델 weight 다운로드·cloud API를 기본 부트스트랩에 포함하지 않는다. |
-| [`render.py`](https://raw.githubusercontent.com/Hskim-droid/local-llm/main/render.py), [`schema.json`](https://raw.githubusercontent.com/Hskim-droid/local-llm/main/schema.json), [`packs/README.md`](https://raw.githubusercontent.com/Hskim-droid/local-llm/main/packs/README.md) | 구조화된 content JSON을 고정 템플릿 DOCX로 만들고, report/minutes/translation pack을 구분한다. renderer는 모델 호출과 분리된다. | `TranslationBatch`가 원문·번역문·source_ref를 함께 보존하고, `fixture_demo.py`가 번역된 view만 DOCX에 넣은 뒤 reopen/cell 검사를 수행한다. manifest에는 번역 backend·언어·필드별 증거를 추가한다. | 현재 fixture는 DOCX 하나만 렌더링한다. XLSX/PPTX renderer, 실제 pack schema 호환, 음성/vision/whisper 경로는 아직 연결하지 않는다. |
+| [`render.py`](https://raw.githubusercontent.com/Hskim-droid/local-llm/main/render.py), [`schema.json`](https://raw.githubusercontent.com/Hskim-droid/local-llm/main/schema.json), [`packs/README.md`](https://raw.githubusercontent.com/Hskim-droid/local-llm/main/packs/README.md) | 구조화된 content JSON을 고정 템플릿 DOCX로 만들고, report/minutes/translation pack을 구분한다. renderer는 모델 호출과 분리된다. | `TranslationBatch`가 원문·번역문·source_ref를 함께 보존하고, `document_renderers.py`가 같은 record view를 DOCX/XLSX/PPTX로 렌더한 뒤 형식별 reopen/cell 검사를 수행한다. manifest에는 번역 backend·언어·필드별 증거를 추가한다. | 실제 pack schema 호환, 음성/vision/whisper 경로, 사용자별 고급 템플릿·스타일 선택, PPTX 페이지 분할·앱 렌더 검증은 아직 연결하지 않는다. |
 
 이 참고 프로젝트와의 통합은 실행 파일을 복사하는 방식이 아니라 계약을
 분리하는 방식이다. UI 어댑터가 수집한 원본 레코드는 `records`로 남고,
@@ -109,7 +109,8 @@ RPA 문헌에서 말하는 소프트웨어 로봇은 사람이 반복적으로 �
 | ambiguity·forbidden action 차단 | `browser_probe.py` task contract | duplicate/forbidden tests | 완료 |
 | partial/error tree에서 native action 차단 | `native_adapters.py` | transactional cache tests | 완료 |
 | queue priority·idempotency·stale recovery | `agent-harness/harness.py` | `tests/test_harness.py` | 완료 |
-| artifact format·hash·manifest check | `harness.py`, `fixture_demo.py` | DOCX reopen/hash tests | 완료 |
+| artifact format·hash·manifest check | `harness.py`, `fixture_demo.py`, `document_renderers.py` | DOCX/XLSX/PPTX reopen/hash tests | 완료 |
+| user-selected office renderer | `document_renderers.py`, `fixture_demo.py` | DOCX/XLSX/PPTX reopen and cell checks | 완료 |
 | local translation boundary | `translation_pipeline.py`, `fixture_demo.py` | passthrough evidence, loopback endpoint, invalid JSON, translated DOCX fixture | 완료 |
 | host capability mapping | `bootstrap.py` | report identity redaction, allowlisted plan, explicit network gate | 완료 |
 | 승인 전송·메일·스케줄 | local config interface only | 실제 sender 없음 | 미구현 |
@@ -149,11 +150,11 @@ flowchart LR
   policy를 확인한다. 현재 native adapter는 관찰된 node의 role/action/enabled와
   observation generation을 확인하며, browser의 forbidden menu 정책을 자동으로
   상속하지 않는다.
-- 현재 DOCX fixture 결과는 허용된 output format 하나와 hash가 있는 manifest로
+- 현재 fixture 결과는 job이 선택한 output format 하나와 hash가 있는 manifest로
   검증한다. 번역을 켜면 원문 레코드와 필드별 번역 evidence를 manifest에 남기고,
-  번역된 view를 문서에 넣은 뒤 같은 reopen 검사로 확인한다. generic probe와
-  native adapter의 결과를 queue·manifest에 연결하는 통합, 그리고 XLSX/PPTX
-  renderer는 별도 작업이다.
+  번역된 view를 선택된 문서에 넣은 뒤 형식별 reopen 검사로 확인한다. generic
+  probe와 native adapter의 결과를 queue·manifest에 연결하는 통합과 고급
+  템플릿 선택은 별도 작업이다.
 
 ## 6. 실제 개선 항목과 종료 조건
 
@@ -188,7 +189,7 @@ renderer가 사용할 복사본만 평탄화한다. 따라서 현장 화면을 �
 | 3. action/postcondition evaluator | click 뒤 observation diff 또는 expected state 검증 | receipt가 “호출됨”과 “업무 상태가 바뀜”을 구분 | 상태 확인 불가능하면 draft-only 유지 |
 | 4. event-log benchmark | fixture와 synthetic human trajectory의 action·latency 수집 | 성공률·step 수·ambiguity·recovery를 버전별 비교 | 실제 업무 로그 권한/비식별화가 없으면 공개 dataset만 사용 |
 | 5. real-host validation | Mac AX permission과 Windows UIA window root 각각 1개씩 | 실제 창에서 observe→pinned action→artifact manifest 통과 | 권한·control pattern 불안정 시 native 실행은 계속 optional로 둠 |
-| 6. local model validation | 고정 레코드와 loopback mock/실제 모델 1회 | 원문 보존·번역 evidence·DOCX reopen이 일치하고 endpoint가 외부 주소를 거부 | 모델 JSON 불안정·메모리 부족이면 passthrough/사람 검토로 중단 |
+| 6. local model validation | 고정 레코드와 loopback mock/실제 모델 1회 | 원문 보존·번역 evidence·선택 포맷 reopen이 일치하고 endpoint가 외부 주소를 거부 | 모델 JSON 불안정·메모리 부족이면 passthrough/사람 검토로 중단 |
 
 이 표의 항목은 구현 승인 목록이 아니라, 현재 범위에서 확인된 공백과 작은
 검증 단위다. 실제 ERP·메일·승인 권한을 켜기 전에 각 종료 조건을 충족해야 한다.
