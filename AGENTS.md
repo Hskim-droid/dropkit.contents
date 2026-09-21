@@ -1,20 +1,21 @@
 # Codex work rules for dropkit.contents
 
-This repository is a public contents hub. The `agent-harness/` directory is a
-local, opt-in control plane for persona jobs; it does not contain credentials
-or live ERP/QMS connectors.
+This repository is the public publication and document-content hub. It contains
+Astro publication infrastructure, research notes, project introductions, and
+social/media copies. The executable local-model engine and UI-to-document
+harness live in the separate [`local-llm`](https://github.com/Hskim-droid/local-llm)
+repository.
 
-When Codex starts work in this repository:
+When Codex starts work here:
 
-1. Run `python agent-harness/harness.py doctor` before using the queue.
-2. Use `python agent-harness/harness.py session-start --agent codex` to record
-   the session attachment.
-3. Keep jobs in `draft_only` mode until the user explicitly authorizes a live
-   connector or email sender.
-4. Treat UI extraction as read-only. Do not approve, delete, post, or send from
-   a screen session without an explicit task and a human approval gate.
-5. Never add secrets, cookies, screenshots containing business data, or local
-   runtime state to git.
-
-The harness is deliberately cross-platform: use `scripts/codex-start.sh` on
-macOS and `scripts/codex-start.ps1` on Windows/LG Gram.
+1. Keep edits within the site, public writing, content ledger, or publication
+   configuration unless the user explicitly asks for a repository-level change.
+2. Run `npm ci`, `npm run build`, and `git diff --check` for site or content
+   changes.
+3. Keep examples synthetic. Never add credentials, cookies, screenshots with
+   business data, ERP/QMS records, mail addresses, or local runtime state.
+4. Do not add executable ERP/QMS connectors, mail senders, unattended writes, or
+   cloud model fallbacks to this content repository.
+5. For harness or local-model changes, work in
+   [`local-llm`](https://github.com/Hskim-droid/local-llm) and run its own Go and
+   Python checks there.
