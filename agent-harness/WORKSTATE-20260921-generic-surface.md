@@ -49,3 +49,8 @@
 - 공개 운영 후속 판단: `agent-harness`를 독립 공개 레포로 분리할지, LICENSE·
   SECURITY·CONTRIBUTING·Python CI를 어떤 범위로 추가할지는 라이선스와 외부
   기여 수용 여부를 정한 뒤 결정한다.
+- 공개 운영 가드레일 적용: `SECURITY.md`, `CONTRIBUTING.md`, issue/PR 템플릿,
+  Dependabot 설정, `agent-harness` 경로 한정 Python CI를 추가했다. 루트 README에
+  정책 링크를 연결했고, GitHub 저장소 설명·homepage·Topics·Dependabot 보안
+  업데이트·secret scanning·push protection을 설정했다. LICENSE는 사용자 결정이
+  필요해 추가하지 않았다.

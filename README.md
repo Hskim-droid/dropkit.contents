@@ -61,6 +61,12 @@ dependencies:
 python3 -m unittest discover -s agent-harness/tests -p 'test_*.py'
 ```
 
+## Public repository policies
+
+- [Contributing](CONTRIBUTING.md) explains the site/harness boundary and local checks.
+- [Security policy](SECURITY.md) explains what must never enter a public issue or fixture.
+- The repository does not yet declare a single code/content license; public visibility is not reuse permission.
+
 ## Publication language
 
 Public pages, project introductions, and new content are written in English for a global audience. Original-language source material and historical filenames are preserved. New articles remain subject to evidence and editorial review.
