@@ -170,6 +170,7 @@ python3 agent-harness/fixture_demo.py \
 ```
 
 The command reads `fixtures/qms_daily.html` through Chromium, validates three
-records and their source references, creates one DOCX, reopens it, writes the
-manifest, and moves the queued job to `drafted`. It never sends email or writes
-to an ERP/QMS system.
+records and their source references, creates one DOCX, reopens it and compares
+every table cell with the extracted records, writes the manifest, and moves the
+specified queued job to `drafted`. It rejects XLSX/PPTX and non-QMS jobs before
+claiming them. It never sends email or writes to an ERP/QMS system.

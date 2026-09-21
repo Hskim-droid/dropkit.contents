@@ -69,12 +69,56 @@ class FixtureDemoTests(unittest.TestCase):
             html = Path(temp) / "duplicate.html"
             fixture = (ROOT / "fixtures" / "qms_daily.html").read_text(encoding="utf-8")
             duplicate = fixture.replace(
-                '<tr data-record-id="QMS-1003">',
-                '<tr data-record-id="QMS-1001">',
+                '<tr data-record-id="QMS-1003">\n            <td>QMS-1003</td>',
+                '<tr data-record-id="QMS-1001">\n            <td>QMS-1001</td>',
             )
             html.write_text(duplicate, encoding="utf-8")
             with self.assertRaises(ValueError):
                 fixture_demo.extract_qms_screen(html)
+
+    def test_fixture_rejects_non_docx_without_claiming_it(self):
+        with tempfile.TemporaryDirectory() as temp:
+            temp_path = Path(temp)
+            config_path = temp_path / "config.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "persona_id": "han-gyeol",
+                        "persona_name": "한결",
+                        "mode": "draft_only",
+                        "state_dir": str(temp_path / "state"),
+                        "artifact_dir": str(temp_path / "artifacts"),
+                        "default_output_format": "xlsx",
+                        "recipient_allowlist": [],
+                        "executor": {"extract": "fixture-demo", "render": None, "send": None},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                harness.main(
+                    [
+                        "--config",
+                        str(config_path),
+                        "enqueue",
+                        "--source-system",
+                        "QMS",
+                        "--request",
+                        "synthetic xlsx report 2026-09-21",
+                        "--output-format",
+                        "xlsx",
+                    ]
+                ),
+                0,
+            )
+            config = harness.load_config(config_path)
+            with harness.connect(config) as connection:
+                job_id = connection.execute("SELECT id FROM jobs").fetchone()[0]
+            with self.assertRaises(ValueError):
+                fixture_demo.run_demo(config_path, job_id, ROOT / "fixtures" / "qms_daily.html", claim=True)
+            with harness.connect(config) as connection:
+                status = connection.execute("SELECT status FROM jobs WHERE id=?", (job_id,)).fetchone()[0]
+            self.assertEqual(status, "queued")
 
 
 if __name__ == "__main__":

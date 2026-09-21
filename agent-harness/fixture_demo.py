@@ -124,12 +124,16 @@ def render_docx(
     document.save(output_path)
 
 
-def reopen_docx(output_path: Path, expected_records: int) -> dict[str, Any]:
+def reopen_docx(output_path: Path, records: list[dict[str, Any]]) -> dict[str, Any]:
     require_dependencies()
     document = Document(output_path)
     table_rows = len(document.tables[0].rows) if document.tables else 0
-    passed = bool(document.paragraphs) and table_rows == expected_records + 1
-    return {"name": "docx_reopen_and_row_count", "passed": passed}
+    cell_values = []
+    if document.tables:
+        cell_values = [[cell.text.strip() for cell in row.cells] for row in document.tables[0].rows[1:]]
+    expected_values = [[record[column] for column in EXPECTED_COLUMNS] for record in records]
+    passed = bool(document.paragraphs) and table_rows == len(records) + 1 and cell_values == expected_values
+    return {"name": "docx_reopen_and_cell_values", "passed": passed}
 
 
 def sha256_file(path: Path) -> str:
@@ -152,8 +156,19 @@ def _json_output(call: list[str]) -> dict[str, Any]:
 
 def run_demo(config_path: Path, job_id: str, html_path: Path, claim: bool = False) -> dict[str, Any]:
     config = harness.load_config(config_path)
+    with harness.connect(config) as connection:
+        row = connection.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()
+        if row is None:
+            raise ValueError(f"unknown job: {job_id}")
+        initial_job = harness.row_json(row)
+    if initial_job["output_format"] != "docx":
+        raise ValueError("fixture_demo only supports a DOCX job")
+    if initial_job["source_system"] != "QMS":
+        raise ValueError("fixture_demo only supports the QMS source system")
     if claim:
-        claim_result = _json_output(["--config", str(config_path), "run-once", "--claim"])
+        claim_result = _json_output(
+            ["--config", str(config_path), "run-once", "--claim", "--job-id", job_id]
+        )
         if claim_result.get("job_id") != job_id:
             raise RuntimeError(f"claimed {claim_result.get('job_id')} instead of {job_id}")
     with harness.connect(config) as connection:
@@ -166,7 +181,7 @@ def run_demo(config_path: Path, job_id: str, html_path: Path, claim: bool = Fals
     source_system, captured_at, records, checks = extract_qms_screen(html_path)
     artifact_path = harness.path_from_config(config, "artifact_dir") / f"{job_id}.docx"
     render_docx(artifact_path, source_system, captured_at, records)
-    checks.append(reopen_docx(artifact_path, len(records)))
+    checks.append(reopen_docx(artifact_path, records))
     manifest_path = harness.path_from_config(config, "state_dir") / f"{job_id}.manifest.json"
     manifest = {
         "schema_version": harness.MANIFEST_VERSION,
@@ -177,7 +192,7 @@ def run_demo(config_path: Path, job_id: str, html_path: Path, claim: bool = Fals
         "checks": checks,
         "artifact": {
             "path": str(artifact_path),
-            "format": job["output_format"],
+            "format": "docx",
             "sha256": sha256_file(artifact_path),
         },
     }

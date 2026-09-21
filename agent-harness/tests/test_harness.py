@@ -152,6 +152,38 @@ class HarnessTests(unittest.TestCase):
                 1,
             )
 
+    def test_claim_job_id_does_not_take_queue_head(self):
+        with tempfile.TemporaryDirectory() as temp:
+            temp_path = Path(temp)
+            config_path = self.write_config(temp_path, extractor="local-qms-adapter")
+            for request in ("first", "second"):
+                self.assertEqual(
+                    harness.main(
+                        [
+                            "--config",
+                            str(config_path),
+                            "enqueue",
+                            "--source-system",
+                            "QMS",
+                            "--request",
+                            request,
+                            "--idempotency-key",
+                            request,
+                        ]
+                    ),
+                    0,
+                )
+            config = harness.load_config(config_path)
+            with harness.connect(config) as connection:
+                target_id = connection.execute("SELECT id FROM jobs WHERE request='second'").fetchone()[0]
+            self.assertEqual(
+                harness.main(["--config", str(config_path), "run-once", "--claim", "--job-id", target_id]),
+                0,
+            )
+            with harness.connect(config) as connection:
+                statuses = dict(connection.execute("SELECT request, status FROM jobs").fetchall())
+            self.assertEqual(statuses, {"first": "queued", "second": "running"})
+
     def test_invalid_output_format_is_rejected(self):
         with self.assertRaises(SystemExit):
             harness.build_parser().parse_args(

@@ -362,9 +362,14 @@ def cmd_run_once(args: argparse.Namespace) -> int:
     with connect(config) as connection:
         init_schema(connection)
         connection.execute("BEGIN IMMEDIATE")
-        row = connection.execute(
-            "SELECT * FROM jobs WHERE status='queued' ORDER BY priority DESC, created_at ASC LIMIT 1"
-        ).fetchone()
+        if args.job_id:
+            row = connection.execute(
+                "SELECT * FROM jobs WHERE status='queued' AND id=? LIMIT 1", (args.job_id,)
+            ).fetchone()
+        else:
+            row = connection.execute(
+                "SELECT * FROM jobs WHERE status='queued' ORDER BY priority DESC, created_at ASC LIMIT 1"
+            ).fetchone()
         if row is None:
             connection.commit()
             print(json.dumps({"ok": True, "message": "queue empty"}, ensure_ascii=False))
@@ -491,6 +496,7 @@ def build_parser() -> argparse.ArgumentParser:
     run = sub.add_parser("run-once", help="take the next queued job")
     run.add_argument("--dry-run", action="store_true", help="preview without changing job state")
     run.add_argument("--claim", action="store_true", help="claim for an already-running local adapter; never executes a command")
+    run.add_argument("--job-id", help="claim this exact queued job instead of the queue head")
 
     result = sub.add_parser("record-result", help="validate an adapter manifest and mark a job drafted")
     result.add_argument("--job-id", required=True)
