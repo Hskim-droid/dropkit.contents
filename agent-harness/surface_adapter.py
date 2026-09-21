@@ -40,7 +40,12 @@ class UiNode:
 
 @dataclass(frozen=True)
 class UiObservation:
-    """A point-in-time view of a surface and its advertised capabilities."""
+    """A point-in-time view of a surface and its advertised capabilities.
+
+    ``observation_hash`` identifies equivalent content. ``observation_id`` is a
+    per-capture generation and must be attached to every action request, even
+    when two consecutive captures have the same content hash.
+    """
 
     backend: str
     surface: str
@@ -50,20 +55,21 @@ class UiObservation:
     capabilities: tuple[str, ...]
     captured_at: str = field(default_factory=utc_now)
     schema_version: int = 1
-    observation_id: str = ""
+    observation_id: str = field(default_factory=lambda: f"obs-{uuid4().hex}")
+    observation_hash: str = ""
 
     def __post_init__(self) -> None:
-        if not self.observation_id:
-            stable = {
-                "backend": self.backend,
-                "surface": self.surface,
-                "title": self.title,
-                "url": self.url,
-                "nodes": [node.to_dict() for node in self.nodes],
-                "capabilities": list(self.capabilities),
-            }
-            digest = hashlib.sha256(json.dumps(stable, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
-            object.__setattr__(self, "observation_id", digest[:16])
+        stable = {
+            "backend": self.backend,
+            "surface": self.surface,
+            "title": self.title,
+            "url": self.url,
+            "nodes": [node.to_dict() for node in self.nodes],
+            "capabilities": list(self.capabilities),
+        }
+        digest = hashlib.sha256(json.dumps(stable, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+        if not self.observation_hash:
+            object.__setattr__(self, "observation_hash", digest[:16])
 
     def to_dict(self) -> dict[str, Any]:
         result = asdict(self)
@@ -74,11 +80,12 @@ class UiObservation:
 
 @dataclass(frozen=True)
 class ActionRequest:
-    """A planned adapter action addressed to a node in the latest graph."""
+    """A planned action pinned to a required point-in-time observation."""
 
     action: str
     target_id: str
     reason: str
+    observation_id: str
     expected_capabilities: tuple[str, ...] = ()
 
 

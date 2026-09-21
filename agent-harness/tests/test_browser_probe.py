@@ -22,7 +22,12 @@ class BrowserProbeTests(unittest.TestCase):
                 observation = adapter.observe()
                 node = next(node for node in observation.nodes if node.role == "button")
                 receipt = adapter.execute(
-                    ActionRequest(action="click", target_id=node.node_id, reason="test navigation"),
+                    ActionRequest(
+                        action="click",
+                        target_id=node.node_id,
+                        reason="test navigation",
+                        observation_id=observation.observation_id,
+                    ),
                 )
                 self.assertTrue(receipt.accepted)
                 self.assertTrue(page.get_by_role("menuitem", name="Quality open issues").is_visible())
@@ -36,7 +41,8 @@ class BrowserProbeTests(unittest.TestCase):
                 page = browser.new_page()
                 page.goto((ROOT / "fixtures" / "qms_variant_1.html").resolve().as_uri(), wait_until="load")
                 adapter = browser_probe.PlaywrightAriaAdapter(page)
-                node = next(node for node in adapter.observe().nodes if node.role == "button")
+                observation = adapter.observe()
+                node = next(node for node in observation.nodes if node.role == "button")
                 page.evaluate(
                     """() => {
                         const button = document.createElement('button');
@@ -45,7 +51,59 @@ class BrowserProbeTests(unittest.TestCase):
                     }"""
                 )
                 with self.assertRaises(browser_probe.ProbeError):
-                    adapter.execute(ActionRequest("click", node.node_id, "stale target"))
+                    adapter.execute(ActionRequest("click", node.node_id, "stale target", observation.observation_id))
+            finally:
+                browser.close()
+
+    def test_browser_rejects_an_action_pinned_to_an_old_observation(self):
+        with browser_probe.sync_playwright() as playwright:
+            browser = playwright.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                page.goto((ROOT / "fixtures" / "qms_variant_1.html").resolve().as_uri(), wait_until="load")
+                adapter = browser_probe.PlaywrightAriaAdapter(page)
+                first = adapter.observe()
+                node = next(node for node in first.nodes if node.role == "button")
+                page.evaluate(
+                    """() => {
+                        const button = document.createElement('button');
+                        button.setAttribute('aria-label', 'New navigation state');
+                        document.querySelector('header').append(button);
+                    }"""
+                )
+                adapter.observe()
+                with self.assertRaises(browser_probe.ProbeError):
+                    adapter.execute(
+                        ActionRequest(
+                            "click",
+                            node.node_id,
+                            "old observation",
+                            observation_id=first.observation_id,
+                        )
+                    )
+            finally:
+                browser.close()
+
+    def test_browser_rejects_replaced_node_with_same_observation_hash(self):
+        with browser_probe.sync_playwright() as playwright:
+            browser = playwright.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                page.goto((ROOT / "fixtures" / "qms_variant_1.html").resolve().as_uri(), wait_until="load")
+                adapter = browser_probe.PlaywrightAriaAdapter(page)
+                first = adapter.observe()
+                node = next(node for node in first.nodes if node.role == "button")
+                page.evaluate(
+                    """() => {
+                        const current = document.querySelector('header button');
+                        current.replaceWith(current.cloneNode(true));
+                    }"""
+                )
+                second = adapter.observe()
+                self.assertEqual(first.observation_hash, second.observation_hash)
+                self.assertNotEqual(first.observation_id, second.observation_id)
+                with self.assertRaises(browser_probe.ProbeError):
+                    adapter.execute(ActionRequest("click", node.node_id, "old generation", first.observation_id))
             finally:
                 browser.close()
 

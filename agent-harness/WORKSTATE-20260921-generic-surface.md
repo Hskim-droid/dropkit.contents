@@ -3,24 +3,27 @@
 - 목표: GitHub에서 받은 harness가 메뉴 경로와 화면 DOM을 모르는 상태에서도
   브라우저 접근성 표면을 관찰하고, 읽기 전용 추출만 안전하게 수행할 수 있는
   범용성 경계를 설계·검증한다.
-- 승인된 범위: 외부 사례·공식 문서 조사, semantic browser probe 구현, 공통
+- 승인된 범위: 외부 사례·공식 문서·RPA 논문 근거 추적, semantic browser probe 구현, 공통
   `UiObservation`/`ActionReceipt`/`SurfaceAdapter` 계약 추가, 선택적 macOS
-  AXUIElement·Windows UIA 어댑터와 capability report, synthetic QMS 변형
+  AXUIElement·Windows UIA 어댑터와 capability report, 관찰 ID 고정 실행,
+  synthetic QMS 변형
   fixture 검증, 공개 `main` 푸시. Linux AT-SPI 실제 어댑터와 ERP·메일 연결은
   이번 단계에 추가하지 않는다.
 - 기준 파일: `agent-harness/surface_adapter.py`, `agent-harness/browser_probe.py`,
   `fixtures/qms_task.json`, `fixtures/qms_variant_*.html`,
   `tests/test_browser_probe.py`, `tests/test_surface_adapter.py`,
   `tests/test_native_adapters.py`,
-  `agent-harness/README.md`.
-- 완료 근거: 32개 unittest 통과, `py_compile`, `git diff --check`, variant 3
+  `agent-harness/README.md`, `agent-harness/RPA_REFERENCE_LINEAGE.md`.
+- 완료 근거: 36개 unittest 통과, `py_compile`, `git diff --check`, variant 3
   CLI 실행 확인. 검증 범위는 메뉴 깊이·언어·컬럼 순서·DOM 변화, 미공개 라벨,
   동일 스키마 완료 테이블, 필드 충돌, 금지 메뉴, 중복 ID·산출물 기존 검사를
   포함한다.
-- 공개 커밋: `c93dcd4` (`Add optional native accessibility adapters`), 이전
-  generic probe 커밋 `d757efe`와 `4cc5c3f` 포함. 원격: `Hskim-droid/dropkit.contents`.
+- 공개 커밋: `ccebc85` (`Document RPA lineage and pin UI actions`), 이전
+  native adapter 커밋 `d0b496e`와 generic probe 커밋 `d757efe` 포함. 원격:
+  `Hskim-droid/dropkit.contents`.
 - 남은 제한: 실제 macOS/Windows 권한·창 연결 검증은 각 호스트가 필요하다.
   Linux AT-SPI 어댑터, 접근성 이름/라벨이 없는 화면의 OCR/비전 fallback,
+  공통 native semantic planner·table extractor·postcondition evaluator,
   실제 인증·ERP·메일 adapter와 스케줄/큐 발송은 별도 작업이다.
 - 사용자 미커밋 파일: `src/pages/sitemap.xml.ts`, `src/pages/work/index.astro`,
   `public/examples/`, `src/pages/work/scan-recovery.astro`는 건드리거나 푸시하지

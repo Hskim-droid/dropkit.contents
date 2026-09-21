@@ -201,7 +201,9 @@ adapter.
 
 `surface_adapter.py` fixes the cross-platform boundary. `UiObservation` carries
 the normalized UI graph and capabilities, `ActionRequest` names an intended
-action, and `ActionReceipt` records what the adapter accepted and executed.
+action and must include the generation-specific `observation_id`, and
+`ActionReceipt` records what the adapter accepted and executed against that
+observation.
 `PlaywrightAriaAdapter` is the first implementation; macOS AXUIElement,
 Windows UI Automation, or Linux AT-SPI adapters can implement the same
 `SurfaceAdapter` protocol at the control-plane boundary. The current QMS
@@ -225,3 +227,9 @@ falls back to desktop-wide clicking.
 The native adapter tests use fake AX/UIA trees. Real host permission grants,
 window discovery, and application-specific control patterns still require a
 MacBook or Windows host validation pass.
+
+The design lineage is recorded in
+[`RPA_REFERENCE_LINEAGE.md`](RPA_REFERENCE_LINEAGE.md). It maps the RPA reviews,
+Robot Framework/RPA Framework, TagUI, Playwright, macOS AX, Windows UIA,
+BrowserGym, and OSWorld references to the code decisions and lists the gaps
+that must be closed before enabling real ERP or mail permissions.

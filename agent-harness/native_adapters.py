@@ -147,11 +147,13 @@ def _ax_action_names(api: Any, element: Any) -> list[str]:
 
 
 def _check_expected_capabilities(adapter: Any, request: ActionRequest) -> None:
-    if not request.expected_capabilities:
-        return
     observation = getattr(adapter, "_observation", None)
     if observation is None:
         raise NativeAdapterUnavailable("action requires a current observation")
+    if request.observation_id != observation.observation_id:
+        raise NativeAdapterUnavailable("action observation is stale; observe the surface again")
+    if not request.expected_capabilities:
+        return
     available = set(observation.capabilities)
     missing = set(request.expected_capabilities) - available
     if missing:
@@ -301,7 +303,10 @@ class MacAXAdapter:
             target_id=request.target_id,
             backend=self.backend_name,
             reason=request.reason,
-            evidence={"native_action": native_action},
+            evidence={
+                "native_action": native_action,
+                "observation_id": self._observation.observation_id,
+            },
         )
 
     def close(self) -> None:
@@ -442,7 +447,10 @@ class WindowsUIAAdapter:
             target_id=request.target_id,
             backend=self.backend_name,
             reason=request.reason,
-            evidence={"control_type": getattr(control.element_info, "control_type", "unknown")},
+            evidence={
+                "control_type": getattr(control.element_info, "control_type", "unknown"),
+                "observation_id": self._observation.observation_id,
+            },
         )
 
     def close(self) -> None:

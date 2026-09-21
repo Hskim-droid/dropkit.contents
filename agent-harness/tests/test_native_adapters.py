@@ -112,10 +112,16 @@ class NativeAdapterTests(unittest.TestCase):
 
         observation = adapter.observe()
         node = next(node for node in observation.nodes if node.name == "Open")
-        receipt = adapter.execute(ActionRequest("click", node.node_id, "open menu"))
+        with self.assertRaises(NativeAdapterUnavailable):
+            adapter.execute(ActionRequest("click", node.node_id, "stale", observation_id="old-observation"))
+        self.assertEqual(button.performed, [])
+        with self.assertRaises(NativeAdapterUnavailable):
+            adapter.execute(ActionRequest("click", node.node_id, "missing observation", observation_id=""))
+        receipt = adapter.execute(ActionRequest("click", node.node_id, "open menu", observation.observation_id))
 
         self.assertEqual(receipt.backend, "macos-ax")
         self.assertEqual(button.performed, ["AXPress"])
+        self.assertEqual(receipt.evidence["observation_id"], observation.observation_id)
         self.assertIn("native_accessibility", observation.capabilities)
 
     def test_macos_permission_failure_is_not_downgraded_to_empty_tree(self):
@@ -138,7 +144,7 @@ class NativeAdapterTests(unittest.TestCase):
             adapter.observe()
         self.assertEqual(adapter._elements, {})
         with self.assertRaises(NativeAdapterUnavailable):
-            adapter.execute(ActionRequest("click", "macos-ax:0.0", "stale after failed observation"))
+            adapter.execute(ActionRequest("click", "macos-ax:0.0", "stale after failed observation", "failed-observation"))
         self.assertEqual(good.performed, [])
 
     def test_macos_capability_check_does_not_remap_target_after_tree_reorder(self):
@@ -146,12 +152,37 @@ class NativeAdapterTests(unittest.TestCase):
         delete = FakeAXElement("AXButton", "Delete", actions=("AXPress",))
         root = FakeAXElement("AXApplication", "Fixture", children=(read, delete))
         adapter = MacAXAdapter(root=root, api=FakeAXApi())
-        adapter.observe()
+        observation = adapter.observe()
         root.attrs["AXChildren"] = [delete, read]
 
-        adapter.execute(ActionRequest("click", "macos-ax:0.0", "read", ("navigate",)))
+        adapter.execute(
+            ActionRequest(
+                "click",
+                "macos-ax:0.0",
+                "read",
+                observation.observation_id,
+                expected_capabilities=("navigate",),
+            )
+        )
         self.assertEqual(read.performed, ["AXPress"])
         self.assertEqual(delete.performed, [])
+
+    def test_macos_rejects_replaced_element_with_same_observation_hash(self):
+        old_button = FakeAXElement("AXButton", "Open", actions=("AXPress",))
+        root = FakeAXElement("AXApplication", "Fixture", children=(old_button,))
+        adapter = MacAXAdapter(root=root, api=FakeAXApi())
+        first = adapter.observe()
+        replacement = FakeAXElement("AXButton", "Open", actions=("AXPress",))
+        root.attrs["AXChildren"] = [replacement]
+        second = adapter.observe()
+
+        self.assertEqual(first.observation_hash, second.observation_hash)
+        self.assertNotEqual(first.observation_id, second.observation_id)
+        with self.assertRaises(NativeAdapterUnavailable):
+            adapter.execute(ActionRequest("click", "macos-ax:0.0", "old generation", first.observation_id))
+        self.assertEqual(replacement.performed, [])
+        adapter.execute(ActionRequest("click", "macos-ax:0.0", "current generation", second.observation_id))
+        self.assertEqual(replacement.performed, ["AXPress"])
 
     def test_macos_rejects_unobserved_target_disabled_target_and_partial_tree(self):
         button = FakeAXElement("AXButton", "Open", actions=("AXPress",))
@@ -161,30 +192,42 @@ class NativeAdapterTests(unittest.TestCase):
         node = next(node for node in observation.nodes if node.name == "Open")
 
         with self.assertRaises(NativeAdapterUnavailable):
-            adapter.execute(ActionRequest("click", node.node_id, "outside"), target=FakeAXElement("AXButton"))
+            adapter.execute(
+                ActionRequest("click", node.node_id, "outside", observation.observation_id),
+                target=FakeAXElement("AXButton"),
+            )
         self.assertEqual(button.performed, [])
 
         adapter.close()
         with self.assertRaises(NativeAdapterUnavailable):
-            adapter.execute(ActionRequest("click", node.node_id, "after close"))
+            adapter.execute(ActionRequest("click", node.node_id, "after close", observation.observation_id))
 
         limited = MacAXAdapter(root=root, api=FakeAXApi(), max_depth=0)
         partial = limited.observe()
         self.assertIn("partial_tree", partial.capabilities)
         with self.assertRaises(NativeAdapterUnavailable):
-            limited.execute(ActionRequest("click", "macos-ax:0", "partial"))
+            limited.execute(ActionRequest("click", "macos-ax:0", "partial", partial.observation_id))
 
     def test_macos_rejects_disabled_or_unsupported_action_before_native_call(self):
         button = FakeAXElement("AXButton", "Disabled", actions=("AXPress",), enabled=False)
         root = FakeAXElement("AXApplication", "Fixture", children=(button,))
         adapter = MacAXAdapter(root=root, api=FakeAXApi())
-        node = next(node for node in adapter.observe().nodes if node.name == "Disabled")
+        observation = adapter.observe()
+        node = next(node for node in observation.nodes if node.name == "Disabled")
         with self.assertRaises(NativeAdapterUnavailable):
-            adapter.execute(ActionRequest("click", node.node_id, "disabled"))
+            adapter.execute(ActionRequest("click", node.node_id, "disabled", observation.observation_id))
         self.assertEqual(button.performed, [])
 
         with self.assertRaises(NativeAdapterUnavailable):
-            adapter.execute(ActionRequest("click", node.node_id, "missing capability", ("read_table",)))
+            adapter.execute(
+                ActionRequest(
+                    "click",
+                    node.node_id,
+                    "missing capability",
+                    observation.observation_id,
+                    expected_capabilities=("read_table",),
+                )
+            )
         self.assertEqual(button.performed, [])
 
     def test_windows_uia_adapter_normalizes_tree_and_clicks(self):
@@ -194,7 +237,9 @@ class NativeAdapterTests(unittest.TestCase):
 
         observation = adapter.observe()
         node = next(node for node in observation.nodes if node.name == "Open")
-        receipt = adapter.execute(ActionRequest("click", node.node_id, "open menu"))
+        with self.assertRaises(NativeAdapterUnavailable):
+            adapter.execute(ActionRequest("click", node.node_id, "missing observation", ""))
+        receipt = adapter.execute(ActionRequest("click", node.node_id, "open menu", observation.observation_id))
 
         self.assertEqual(receipt.backend, "windows-uia")
         self.assertTrue(button.clicked)
@@ -204,13 +249,17 @@ class NativeAdapterTests(unittest.TestCase):
         button = FakeUIAControl("Button", (1, 2), "Open")
         root = FakeUIAControl("Window", (1,), "Fixture", children=(button,))
         adapter = WindowsUIAAdapter(root=root, api=object())
-        node = next(node for node in adapter.observe().nodes if node.name == "Open")
+        observation = adapter.observe()
+        node = next(node for node in observation.nodes if node.name == "Open")
         with self.assertRaises(NativeAdapterUnavailable):
-            adapter.execute(ActionRequest("click", node.node_id, "outside"), target=FakeUIAControl("Button", (9,), "Other"))
+            adapter.execute(
+                ActionRequest("click", node.node_id, "outside", observation.observation_id),
+                target=FakeUIAControl("Button", (9,), "Other"),
+            )
         self.assertFalse(button.clicked)
         adapter.close()
         with self.assertRaises(NativeAdapterUnavailable):
-            adapter.execute(ActionRequest("click", node.node_id, "after close"))
+            adapter.execute(ActionRequest("click", node.node_id, "after close", observation.observation_id))
 
         class FailingRoot(FakeUIAControl):
             def descendants(self):
@@ -231,8 +280,25 @@ class NativeAdapterTests(unittest.TestCase):
             adapter.observe()
         self.assertEqual(adapter._controls, {})
         with self.assertRaises(NativeAdapterUnavailable):
-            adapter.execute(ActionRequest("click", "windows-uia:1-2", "stale after failed observation"))
+            adapter.execute(ActionRequest("click", "windows-uia:1-2", "stale after failed observation", "failed-observation"))
         self.assertFalse(good.clicked)
+
+    def test_windows_rejects_replaced_control_with_same_observation_hash(self):
+        old_button = FakeUIAControl("Button", (1, 2), "Open")
+        root = FakeUIAControl("Window", (1,), "Fixture", children=(old_button,))
+        adapter = WindowsUIAAdapter(root=root, api=object())
+        first = adapter.observe()
+        replacement = FakeUIAControl("Button", (1, 2), "Open")
+        root.children = [replacement]
+        second = adapter.observe()
+
+        self.assertEqual(first.observation_hash, second.observation_hash)
+        self.assertNotEqual(first.observation_id, second.observation_id)
+        with self.assertRaises(NativeAdapterUnavailable):
+            adapter.execute(ActionRequest("click", "windows-uia:1-2", "old generation", first.observation_id))
+        self.assertFalse(replacement.clicked)
+        adapter.execute(ActionRequest("click", "windows-uia:1-2", "current generation", second.observation_id))
+        self.assertTrue(replacement.clicked)
 
     def test_native_adapters_require_explicit_windows_root(self):
         with self.assertRaises(NativeAdapterUnavailable):

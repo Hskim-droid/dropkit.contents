@@ -194,6 +194,10 @@ class PlaywrightAriaAdapter:
     def execute(self, request: ActionRequest, target: Any | None = None) -> ActionReceipt:
         if request.action != "click":
             raise ProbeError(f"unsupported browser action: {request.action}")
+        if self._observation is None:
+            raise ProbeError("browser action requires a current observation")
+        if request.observation_id != self._observation.observation_id:
+            raise ProbeError("action observation is stale; observe the surface again")
         if request.expected_capabilities:
             if self._observation is None:
                 raise ProbeError("browser action requires a current observation")
@@ -221,7 +225,10 @@ class PlaywrightAriaAdapter:
             target_id=request.target_id,
             backend=self.backend_name,
             reason=request.reason,
-            evidence={"surface": self.surface_kind},
+            evidence={
+                "surface": self.surface_kind,
+                "observation_id": self._observation.observation_id,
+            },
         )
 
     def close(self) -> None:
@@ -241,10 +248,18 @@ def open_navigation(
     task: dict[str, Any],
     actions: list[dict[str, Any]],
     adapter: SurfaceAdapter,
+    observation_id: str | None = None,
 ) -> None:
     candidates = semantic_candidates(page, ("button", "link"), aliases_from(task, "navigation_terms"))
     target, name, target_id = choose_unique(candidates, "navigation trigger")
-    receipt = adapter.execute(ActionRequest(action="click", target_id=target_id, reason="open navigation"))
+    receipt = adapter.execute(
+        ActionRequest(
+            action="click",
+            target_id=target_id,
+            reason="open navigation",
+            observation_id=observation_id,
+        )
+    )
     actions.append(receipt.to_dict())
 
 
@@ -340,14 +355,15 @@ def run_task(html_path: Path, task: dict[str, Any]) -> dict[str, Any]:
             page = browser.new_page()
             page.goto(html_path.resolve().as_uri(), wait_until="load")
             adapter = PlaywrightAriaAdapter(page)
-            before = adapter.observe().to_dict()
-            open_navigation(page, task, actions, adapter)
+            before_observation = adapter.observe()
+            before = before_observation.to_dict()
+            open_navigation(page, task, actions, adapter, before_observation.observation_id)
             target_terms = aliases_from(task, "target_terms")
             table_result = visible_table_with_fields(page, fields, table_terms)
             for _ in range(5):
                 if table_result is not None:
                     break
-                adapter.observe()
+                observation = adapter.observe()
                 # The navigation trigger itself can contain words such as
                 # "open". Only menu items and links may satisfy the task
                 # target; the trigger is handled once above.
@@ -385,7 +401,14 @@ def run_task(html_path: Path, task: dict[str, Any]) -> dict[str, Any]:
                                 if not score_name(name, forbidden_terms):
                                     expandable.append((1, item, name, ui_node_id(role, index)))
                     target, name, target_id = choose_unique(expandable, "expandable navigation item")
-                receipt = adapter.execute(ActionRequest(action="click", target_id=target_id, reason="semantic navigation"))
+                receipt = adapter.execute(
+                    ActionRequest(
+                        action="click",
+                        target_id=target_id,
+                        reason="semantic navigation",
+                        observation_id=observation.observation_id,
+                    )
+                )
                 actions.append(receipt.to_dict())
                 page.wait_for_timeout(25)
                 table_result = visible_table_with_fields(page, fields, table_terms)
