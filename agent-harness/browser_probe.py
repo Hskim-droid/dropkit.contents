@@ -12,9 +12,10 @@ import argparse
 import json
 import re
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+from surface_adapter import ActionReceipt, ActionRequest, SurfaceAdapter, UiNode, UiObservation, new_action_id
 
 try:
     from playwright.sync_api import Page, sync_playwright
@@ -37,6 +38,9 @@ def require_dependencies() -> None:
             "python3 -m pip install -r agent-harness/requirements-fixture.txt "
             "and then run `python3 -m playwright install chromium`"
         ) from IMPORT_ERROR
+
+
+Candidate = tuple[int, Any, str, str]
 
 
 def normalize(value: str) -> str:
@@ -89,8 +93,12 @@ def score_name(name: str, aliases: list[str]) -> int:
     return max(scores, default=0)
 
 
-def semantic_candidates(page: Page, roles: tuple[str, ...], aliases: list[str]) -> list[tuple[int, Any, str]]:
-    candidates: list[tuple[int, Any, str]] = []
+def ui_node_id(role: str, index: int) -> str:
+    return f"playwright-aria:{role}:{index}"
+
+
+def semantic_candidates(page: Page, roles: tuple[str, ...], aliases: list[str]) -> list[Candidate]:
+    candidates: list[Candidate] = []
     for role in roles:
         locator = page.get_by_role(role)
         for index in range(locator.count()):
@@ -100,11 +108,11 @@ def semantic_candidates(page: Page, roles: tuple[str, ...], aliases: list[str]) 
             name = name_of(item)
             score = score_name(name, aliases)
             if score:
-                candidates.append((score, item, name))
+                candidates.append((score, item, name, ui_node_id(role, index)))
     return sorted(candidates, key=lambda item: item[0], reverse=True)
 
 
-def choose_unique(candidates: list[tuple[int, Any, str]], purpose: str) -> tuple[Any, str]:
+def choose_unique(candidates: list[Candidate], purpose: str) -> tuple[Any, str, str]:
     if not candidates:
         raise ProbeError(f"no candidate found for {purpose}")
     best_score = candidates[0][0]
@@ -112,47 +120,112 @@ def choose_unique(candidates: list[tuple[int, Any, str]], purpose: str) -> tuple
     if len(best) != 1:
         names = [candidate[2] for candidate in best]
         raise ProbeError(f"ambiguous {purpose}: {names}")
-    return best[0][1], best[0][2]
+    return best[0][1], best[0][2], best[0][3]
+
+
+class PlaywrightAriaAdapter:
+    """SurfaceAdapter implementation for a browser accessibility tree."""
+
+    backend_name = "playwright-aria"
+    surface_kind = "browser"
+
+    def __init__(self, page: Page):
+        self.page = page
+
+    def observe(self) -> UiObservation:
+        nodes: list[UiNode] = []
+        for role in ("button", "link", "menuitem", "heading", "textbox", "table"):
+            locator = self.page.get_by_role(role)
+            for index in range(locator.count()):
+                item = locator.nth(index)
+                if not visible(item):
+                    continue
+                name = name_of(item)
+                state: dict[str, Any] = {}
+                actions: tuple[str, ...] = ()
+                if role in {"button", "link", "menuitem"}:
+                    state["enabled"] = item.is_enabled()
+                    if state["enabled"]:
+                        actions = ("click",)
+                has_popup = item.get_attribute("aria-haspopup")
+                if has_popup:
+                    state["has_popup"] = has_popup
+                expanded = item.get_attribute("aria-expanded")
+                if expanded is not None:
+                    state["expanded"] = expanded == "true"
+                nodes.append(
+                    UiNode(
+                        node_id=ui_node_id(role, index),
+                        role=role,
+                        name=name,
+                        state=state,
+                        actions=actions,
+                        source_ref={"role": role, "index": index},
+                    )
+                )
+        capabilities = ["observe_tree"]
+        if any(node.role == "table" for node in nodes):
+            capabilities.append("read_table")
+        if any(node.role in {"button", "link", "menuitem"} for node in nodes):
+            capabilities.append("navigate")
+        return UiObservation(
+            backend=self.backend_name,
+            surface=self.surface_kind,
+            title=self.page.title(),
+            url=self.page.url,
+            nodes=tuple(nodes),
+            capabilities=tuple(capabilities),
+        )
+
+    def execute(self, request: ActionRequest, target: Any | None = None) -> ActionReceipt:
+        if request.action != "click":
+            raise ProbeError(f"unsupported browser action: {request.action}")
+        if request.expected_capabilities:
+            available = set(self.observe().capabilities)
+            missing = set(request.expected_capabilities) - available
+            if missing:
+                raise ProbeError(f"surface lacks capabilities: {sorted(missing)}")
+        if target is None:
+            parts = request.target_id.split(":")
+            if len(parts) != 3 or parts[0] != self.backend_name:
+                raise ProbeError(f"invalid browser target id: {request.target_id}")
+            role, raw_index = parts[1], parts[2]
+            try:
+                target = self.page.get_by_role(role).nth(int(raw_index))
+            except (TypeError, ValueError) as exc:
+                raise ProbeError(f"invalid browser target id: {request.target_id}") from exc
+        if not visible(target):
+            raise ProbeError(f"target is not visible: {request.target_id}")
+        target.click()
+        return ActionReceipt(
+            action_id=new_action_id(),
+            action=request.action,
+            target_id=request.target_id,
+            backend=self.backend_name,
+            reason=request.reason,
+            evidence={"surface": self.surface_kind},
+        )
+
+    def close(self) -> None:
+        return None
 
 
 def observe(page: Page) -> dict[str, Any]:
-    nodes: list[dict[str, Any]] = []
-    for role in ("button", "link", "menuitem", "heading", "textbox", "table"):
-        locator = page.get_by_role(role)
-        for index in range(locator.count()):
-            item = locator.nth(index)
-            if not visible(item):
-                continue
-            name = name_of(item)
-            nodes.append(
-                {
-                    "role": role,
-                    "name": name,
-                    "enabled": item.is_enabled() if role in {"button", "link", "menuitem"} else None,
-                    "has_popup": item.get_attribute("aria-haspopup"),
-                    "backend": "playwright-aria",
-                }
-            )
-    capabilities = ["observe_tree"]
-    if any(node["role"] == "table" for node in nodes):
-        capabilities.append("read_table")
-    if any(node["role"] in {"button", "link", "menuitem"} for node in nodes):
-        capabilities.append("navigate")
-    return {
-        "captured_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
-        "url": page.url,
-        "title": page.title(),
-        "backend": "playwright-aria",
-        "nodes": nodes,
-        "capabilities": capabilities,
-    }
+    """Compatibility helper returning the normalized observation as a dict."""
+
+    return PlaywrightAriaAdapter(page).observe().to_dict()
 
 
-def open_navigation(page: Page, task: dict[str, Any], actions: list[dict[str, Any]]) -> None:
+def open_navigation(
+    page: Page,
+    task: dict[str, Any],
+    actions: list[dict[str, Any]],
+    adapter: SurfaceAdapter,
+) -> None:
     candidates = semantic_candidates(page, ("button", "link"), aliases_from(task, "navigation_terms"))
-    target, name = choose_unique(candidates, "navigation trigger")
-    target.click()
-    actions.append({"type": "press", "target": name, "reason": "open navigation"})
+    target, name, target_id = choose_unique(candidates, "navigation trigger")
+    receipt = adapter.execute(ActionRequest(action="click", target_id=target_id, reason="open navigation"), target)
+    actions.append(receipt.to_dict())
 
 
 def visible_table_with_fields(
@@ -246,8 +319,9 @@ def run_task(html_path: Path, task: dict[str, Any]) -> dict[str, Any]:
         try:
             page = browser.new_page()
             page.goto(html_path.resolve().as_uri(), wait_until="load")
-            before = observe(page)
-            open_navigation(page, task, actions)
+            adapter = PlaywrightAriaAdapter(page)
+            before = adapter.observe().to_dict()
+            open_navigation(page, task, actions, adapter)
             target_terms = aliases_from(task, "target_terms")
             table_result = visible_table_with_fields(page, fields, table_terms)
             for _ in range(5):
@@ -274,9 +348,9 @@ def run_task(html_path: Path, task: dict[str, Any]) -> dict[str, Any]:
                     raise ProbeError(f"target navigation is forbidden: {[candidate[2] for candidate in unsafe_candidates]}")
                 candidates = [candidate for candidate in candidates if candidate not in unsafe_candidates]
                 if candidates:
-                    target, name = choose_unique(candidates, "target navigation item")
+                    target, name, target_id = choose_unique(candidates, "target navigation item")
                 else:
-                    expandable = []
+                    expandable: list[Candidate] = []
                     for role in ("menuitem", "button"):
                         locator = page.get_by_role(role)
                         for index in range(locator.count()):
@@ -288,17 +362,20 @@ def run_task(html_path: Path, task: dict[str, Any]) -> dict[str, Any]:
                             ):
                                 name = name_of(item)
                                 if not score_name(name, forbidden_terms):
-                                    expandable.append((1, item, name))
-                    target, name = choose_unique(expandable, "expandable navigation item")
-                target.click()
-                actions.append({"type": "press", "target": name, "reason": "semantic navigation"})
+                                    expandable.append((1, item, name, ui_node_id(role, index)))
+                    target, name, target_id = choose_unique(expandable, "expandable navigation item")
+                receipt = adapter.execute(
+                    ActionRequest(action="click", target_id=target_id, reason="semantic navigation"),
+                    target,
+                )
+                actions.append(receipt.to_dict())
                 page.wait_for_timeout(25)
                 table_result = visible_table_with_fields(page, fields, table_terms)
             if table_result is None:
                 raise ProbeError("no visible table matched task fields after navigation")
             table, mapping = table_result
             records = extract_table(table, mapping, fields, identity_field)
-            after = observe(page)
+            after = adapter.observe().to_dict()
             return {
                 "task_id": task.get("task_id", "unnamed"),
                 "goal": task.get("goal", ""),

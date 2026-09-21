@@ -3,13 +3,15 @@
 - 목표: GitHub에서 받은 harness가 메뉴 경로와 화면 DOM을 모르는 상태에서도
   브라우저 접근성 표면을 관찰하고, 읽기 전용 추출만 안전하게 수행할 수 있는
   범용성 경계를 설계·검증한다.
-- 승인된 범위: 외부 사례·공식 문서 조사, semantic browser probe 구현, synthetic
-  QMS 변형 fixture 검증, 공개 `main` 푸시. Native UIA/AX/AT-SPI 어댑터와 실제
+- 승인된 범위: 외부 사례·공식 문서 조사, semantic browser probe 구현, 공통
+  `UiObservation`/`ActionReceipt`/`SurfaceAdapter` 계약 추가, synthetic QMS
+  변형 fixture 검증, 공개 `main` 푸시. Native UIA/AX/AT-SPI 실제 어댑터와
   ERP·메일 연결은 이번 단계에 추가하지 않는다.
-- 기준 파일: `agent-harness/browser_probe.py`, `fixtures/qms_task.json`,
-  `fixtures/qms_variant_*.html`, `tests/test_browser_probe.py`,
+- 기준 파일: `agent-harness/surface_adapter.py`, `agent-harness/browser_probe.py`,
+  `fixtures/qms_task.json`, `fixtures/qms_variant_*.html`,
+  `tests/test_browser_probe.py`, `tests/test_surface_adapter.py`,
   `agent-harness/README.md`.
-- 완료 근거: 16개 unittest 통과, `py_compile`, `git diff --check`, variant 3
+- 완료 근거: 18개 unittest 통과, `py_compile`, `git diff --check`, variant 3
   CLI 실행 확인. 검증 범위는 메뉴 깊이·언어·컬럼 순서·DOM 변화, 미공개 라벨,
   동일 스키마 완료 테이블, 필드 충돌, 금지 메뉴, 중복 ID·산출물 기존 검사를
   포함한다.

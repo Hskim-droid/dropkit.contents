@@ -7,10 +7,28 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 import browser_probe  # noqa: E402
+from surface_adapter import ActionRequest  # noqa: E402
 
 
 @unittest.skipUnless(browser_probe.IMPORT_ERROR is None, "browser probe dependencies are not installed")
 class BrowserProbeTests(unittest.TestCase):
+    def test_adapter_can_execute_a_node_id_from_its_observation(self):
+        with browser_probe.sync_playwright() as playwright:
+            browser = playwright.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                page.goto((ROOT / "fixtures" / "qms_variant_1.html").resolve().as_uri(), wait_until="load")
+                adapter = browser_probe.PlaywrightAriaAdapter(page)
+                observation = adapter.observe()
+                node = next(node for node in observation.nodes if node.role == "button")
+                receipt = adapter.execute(
+                    ActionRequest(action="click", target_id=node.node_id, reason="test navigation"),
+                )
+                self.assertTrue(receipt.accepted)
+                self.assertTrue(page.get_by_role("menuitem", name="Quality open issues").is_visible())
+            finally:
+                browser.close()
+
     def test_one_task_contract_handles_three_menu_and_table_variants(self):
         task = json.loads((ROOT / "fixtures" / "qms_task.json").read_text(encoding="utf-8"))
         expected_ids = ["QMS-1001", "QMS-1002", "QMS-1003"]
@@ -22,6 +40,11 @@ class BrowserProbeTests(unittest.TestCase):
                 self.assertTrue(all(check["passed"] for check in result["checks"]))
                 self.assertGreaterEqual(len(result["actions"]), 2 if number < 3 else 4)
                 self.assertIn("read_table", result["observation_after"]["capabilities"])
+                self.assertEqual(result["observation_before"]["schema_version"], 1)
+                self.assertEqual(result["observation_after"]["backend"], "playwright-aria")
+                self.assertTrue(result["actions"][0]["action_id"].startswith("act-"))
+                self.assertEqual(result["actions"][0]["action"], "click")
+                self.assertIn("target_id", result["actions"][0])
 
     def test_ambiguous_navigation_stops_without_clicking(self):
         task = json.loads((ROOT / "fixtures" / "qms_task.json").read_text(encoding="utf-8"))
