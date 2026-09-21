@@ -1,0 +1,2 @@
+DeepSeek shipped V4 Pro on August 13, 2026. The official release supersedes the preview and adds stronger agentic capability. The model is available via API, web interface, and mobile app. Context win
+https://dropkit-contents.pages.dev/posts/drop-2026-09-03-kr-am/

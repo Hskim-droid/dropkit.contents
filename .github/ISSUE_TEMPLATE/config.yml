@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security report
+    url: https://github.com/Hskim-droid/dropkit.contents/security/advisories/new
+    about: Do not publish credentials, cookies, customer data, or real-work screenshots in a public issue.
+  - name: Project context
+    url: https://dropkit-contents.pages.dev/work/
+    about: Read the public project scope and current verification limits first.

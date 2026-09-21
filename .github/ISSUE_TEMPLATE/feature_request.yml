@@ -1,0 +1,26 @@
+name: Feature request
+description: Suggest a bounded improvement to the public site or experimental harness.
+title: "[Feature] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user problem or reproducibility gap would this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Describe the smallest synthetic or local change that would test the idea.
+    validations:
+      required: true
+  - type: checkboxes
+    id: boundary
+    attributes:
+      label: Boundary
+      options:
+        - label: I will not require real credentials, customer data, or unattended external writes in the public fixture.
+          required: true

@@ -1,0 +1,2 @@
+This public ledger documents recent observations regarding model pricing and performance metrics, gathered from various sources.
+https://dropkit-contents.pages.dev/posts/drop-2026-09-02-us-lunch/
