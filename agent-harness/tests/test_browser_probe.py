@@ -29,6 +29,26 @@ class BrowserProbeTests(unittest.TestCase):
             finally:
                 browser.close()
 
+    def test_browser_rejects_a_node_that_changed_since_observation(self):
+        with browser_probe.sync_playwright() as playwright:
+            browser = playwright.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                page.goto((ROOT / "fixtures" / "qms_variant_1.html").resolve().as_uri(), wait_until="load")
+                adapter = browser_probe.PlaywrightAriaAdapter(page)
+                node = next(node for node in adapter.observe().nodes if node.role == "button")
+                page.evaluate(
+                    """() => {
+                        const button = document.createElement('button');
+                        button.setAttribute('aria-label', 'Injected navigation');
+                        document.querySelector('header').prepend(button);
+                    }"""
+                )
+                with self.assertRaises(browser_probe.ProbeError):
+                    adapter.execute(ActionRequest("click", node.node_id, "stale target"))
+            finally:
+                browser.close()
+
     def test_one_task_contract_handles_three_menu_and_table_variants(self):
         task = json.loads((ROOT / "fixtures" / "qms_task.json").read_text(encoding="utf-8"))
         expected_ids = ["QMS-1001", "QMS-1002", "QMS-1003"]

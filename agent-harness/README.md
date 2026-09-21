@@ -204,4 +204,24 @@ the normalized UI graph and capabilities, `ActionRequest` names an intended
 action, and `ActionReceipt` records what the adapter accepted and executed.
 `PlaywrightAriaAdapter` is the first implementation; macOS AXUIElement,
 Windows UI Automation, or Linux AT-SPI adapters can implement the same
-`SurfaceAdapter` protocol without changing task planning or queue code.
+`SurfaceAdapter` protocol at the control-plane boundary. The current QMS
+planner still contains browser-specific table extraction, so native table
+planning is a separate adapter task rather than an automatic drop-in.
+
+`native_adapters.py` includes optional macOS AXUIElement and Windows UIA
+implementations. They require an explicit application/window root and load
+their platform binding only when used. Check the local capability report before
+selecting one:
+
+```bash
+python3 -c 'import sys; sys.path.insert(0, "agent-harness"); from native_adapters import backend_status; import json; print(json.dumps([x.to_dict() for x in backend_status()], indent=2))'
+```
+
+Install only on the matching host (`pyobjc-framework-Quartz` on macOS,
+`pywinauto` on Windows) and grant the operating system's accessibility
+permission. A missing binding or missing explicit root fails closed; it never
+falls back to desktop-wide clicking.
+
+The native adapter tests use fake AX/UIA trees. Real host permission grants,
+window discovery, and application-specific control patterns still require a
+MacBook or Windows host validation pass.

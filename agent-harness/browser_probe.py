@@ -131,44 +131,55 @@ class PlaywrightAriaAdapter:
 
     def __init__(self, page: Page):
         self.page = page
+        self._node_refs: dict[str, tuple[Any, str, str]] = {}
+        self._observation: UiObservation | None = None
 
     def observe(self) -> UiObservation:
+        node_refs: dict[str, tuple[Any, str, str]] = {}
         nodes: list[UiNode] = []
-        for role in ("button", "link", "menuitem", "heading", "textbox", "table"):
-            locator = self.page.get_by_role(role)
-            for index in range(locator.count()):
-                item = locator.nth(index)
-                if not visible(item):
-                    continue
-                name = name_of(item)
-                state: dict[str, Any] = {}
-                actions: tuple[str, ...] = ()
-                if role in {"button", "link", "menuitem"}:
-                    state["enabled"] = item.is_enabled()
-                    if state["enabled"]:
-                        actions = ("click",)
-                has_popup = item.get_attribute("aria-haspopup")
-                if has_popup:
-                    state["has_popup"] = has_popup
-                expanded = item.get_attribute("aria-expanded")
-                if expanded is not None:
-                    state["expanded"] = expanded == "true"
-                nodes.append(
-                    UiNode(
-                        node_id=ui_node_id(role, index),
-                        role=role,
-                        name=name,
-                        state=state,
-                        actions=actions,
-                        source_ref={"role": role, "index": index},
+        try:
+            for role in ("button", "link", "menuitem", "heading", "textbox", "table"):
+                locator = self.page.get_by_role(role)
+                for index in range(locator.count()):
+                    item = locator.nth(index)
+                    if not visible(item):
+                        continue
+                    name = name_of(item)
+                    state: dict[str, Any] = {}
+                    actions: tuple[str, ...] = ()
+                    if role in {"button", "link", "menuitem"}:
+                        state["enabled"] = item.is_enabled()
+                        if state["enabled"]:
+                            actions = ("click",)
+                    has_popup = item.get_attribute("aria-haspopup")
+                    if has_popup:
+                        state["has_popup"] = has_popup
+                    expanded = item.get_attribute("aria-expanded")
+                    if expanded is not None:
+                        state["expanded"] = expanded == "true"
+                    node_id = ui_node_id(role, index)
+                    nodes.append(
+                        UiNode(
+                            node_id=node_id,
+                            role=role,
+                            name=name,
+                            state=state,
+                            actions=actions,
+                            source_ref={"role": role, "index": index},
+                        )
                     )
-                )
+                    if actions:
+                        node_refs[node_id] = (item, role, name)
+        except Exception:
+            self._node_refs = {}
+            self._observation = None
+            raise
         capabilities = ["observe_tree"]
         if any(node.role == "table" for node in nodes):
             capabilities.append("read_table")
         if any(node.role in {"button", "link", "menuitem"} for node in nodes):
             capabilities.append("navigate")
-        return UiObservation(
+        observation = UiObservation(
             backend=self.backend_name,
             surface=self.surface_kind,
             title=self.page.title(),
@@ -176,26 +187,33 @@ class PlaywrightAriaAdapter:
             nodes=tuple(nodes),
             capabilities=tuple(capabilities),
         )
+        self._node_refs = node_refs
+        self._observation = observation
+        return observation
 
     def execute(self, request: ActionRequest, target: Any | None = None) -> ActionReceipt:
         if request.action != "click":
             raise ProbeError(f"unsupported browser action: {request.action}")
         if request.expected_capabilities:
-            available = set(self.observe().capabilities)
+            if self._observation is None:
+                raise ProbeError("browser action requires a current observation")
+            available = set(self._observation.capabilities)
             missing = set(request.expected_capabilities) - available
             if missing:
                 raise ProbeError(f"surface lacks capabilities: {sorted(missing)}")
-        if target is None:
-            parts = request.target_id.split(":")
-            if len(parts) != 3 or parts[0] != self.backend_name:
-                raise ProbeError(f"invalid browser target id: {request.target_id}")
-            role, raw_index = parts[1], parts[2]
-            try:
-                target = self.page.get_by_role(role).nth(int(raw_index))
-            except (TypeError, ValueError) as exc:
-                raise ProbeError(f"invalid browser target id: {request.target_id}") from exc
+        if target is not None:
+            raise ProbeError("browser actions must resolve the target from its observed node id")
+        if request.target_id not in self._node_refs:
+            raise ProbeError("target is missing from the latest browser observation")
+        target, expected_role, expected_name = self._node_refs[request.target_id]
         if not visible(target):
             raise ProbeError(f"target is not visible: {request.target_id}")
+        if not target.is_enabled():
+            raise ProbeError(f"target is disabled: {request.target_id}")
+        if name_of(target) != expected_name:
+            raise ProbeError(f"target changed since observation: {request.target_id}")
+        if self.page.get_by_role(expected_role, name=expected_name, exact=True).count() != 1:
+            raise ProbeError(f"target is no longer unique: {request.target_id}")
         target.click()
         return ActionReceipt(
             action_id=new_action_id(),
@@ -207,6 +225,8 @@ class PlaywrightAriaAdapter:
         )
 
     def close(self) -> None:
+        self._node_refs = {}
+        self._observation = None
         return None
 
 
@@ -224,7 +244,7 @@ def open_navigation(
 ) -> None:
     candidates = semantic_candidates(page, ("button", "link"), aliases_from(task, "navigation_terms"))
     target, name, target_id = choose_unique(candidates, "navigation trigger")
-    receipt = adapter.execute(ActionRequest(action="click", target_id=target_id, reason="open navigation"), target)
+    receipt = adapter.execute(ActionRequest(action="click", target_id=target_id, reason="open navigation"))
     actions.append(receipt.to_dict())
 
 
@@ -327,6 +347,7 @@ def run_task(html_path: Path, task: dict[str, Any]) -> dict[str, Any]:
             for _ in range(5):
                 if table_result is not None:
                     break
+                adapter.observe()
                 # The navigation trigger itself can contain words such as
                 # "open". Only menu items and links may satisfy the task
                 # target; the trigger is handled once above.
@@ -364,10 +385,7 @@ def run_task(html_path: Path, task: dict[str, Any]) -> dict[str, Any]:
                                 if not score_name(name, forbidden_terms):
                                     expandable.append((1, item, name, ui_node_id(role, index)))
                     target, name, target_id = choose_unique(expandable, "expandable navigation item")
-                receipt = adapter.execute(
-                    ActionRequest(action="click", target_id=target_id, reason="semantic navigation"),
-                    target,
-                )
+                receipt = adapter.execute(ActionRequest(action="click", target_id=target_id, reason="semantic navigation"))
                 actions.append(receipt.to_dict())
                 page.wait_for_timeout(25)
                 table_result = visible_table_with_fields(page, fields, table_terms)
