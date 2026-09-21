@@ -155,26 +155,49 @@ def open_navigation(page: Page, task: dict[str, Any], actions: list[dict[str, An
     actions.append({"type": "press", "target": name, "reason": "open navigation"})
 
 
-def visible_table_with_fields(page: Page, fields: dict[str, list[str]]) -> tuple[Any, dict[str, int]] | None:
+def visible_table_with_fields(
+    page: Page,
+    fields: dict[str, list[str]],
+    table_terms: list[str],
+) -> tuple[Any, dict[str, int]] | None:
     tables = page.get_by_role("table")
+    table_matches: list[tuple[int, Any, dict[str, int]]] = []
     for index in range(tables.count()):
         table = tables.nth(index)
         if not visible(table):
             continue
+        table_name = table.get_attribute("aria-label") or ""
+        table_score = score_name(table_name, table_terms) if table_terms else 1
+        # A table label must contain a complete task term. A single shared
+        # token such as "issues" is too weak and could select a completed or
+        # otherwise unrelated table before the requested view is opened.
+        if table_terms and table_score < 60:
+            continue
         headers = [text.strip() for text in table.get_by_role("columnheader").all_text_contents()]
         mapping: dict[str, int] = {}
+        used_positions: set[int] = set()
         for field, aliases in fields.items():
-            matches = [(position, score_name(header, aliases)) for position, header in enumerate(headers)]
-            matches = [(position, score) for position, score in matches if score]
-            if not matches:
+            column_matches = [(position, score_name(header, aliases)) for position, header in enumerate(headers)]
+            column_matches = [(position, score) for position, score in column_matches if score]
+            if not column_matches:
                 break
-            best_score = max(score for _, score in matches)
-            best = [position for position, score in matches if score == best_score]
+            best_score = max(score for _, score in column_matches)
+            best = [position for position, score in column_matches if score == best_score]
             if len(best) != 1:
                 raise ProbeError(f"ambiguous column for {field}: {headers}")
+            if best[0] in used_positions:
+                raise ProbeError(f"multiple fields map to column {headers[best[0]]}: {field}")
             mapping[field] = best[0]
+            used_positions.add(best[0])
         if len(mapping) == len(fields):
-            return table, mapping
+            table_matches.append((table_score, table, mapping))
+    if table_matches:
+        best_score = max(score for score, _, _ in table_matches)
+        best = [match for match in table_matches if match[0] == best_score]
+        if len(best) != 1:
+            raise ProbeError(f"ambiguous target table: {len(best)} tables share the best task match")
+        _, table, mapping = best[0]
+        return table, mapping
     return None
 
 
@@ -211,6 +234,8 @@ def run_task(html_path: Path, task: dict[str, Any]) -> dict[str, Any]:
         raise ProbeError("task.identity_field must name one of task.fields")
     if not all(isinstance(key, str) and isinstance(value, list) for key, value in fields.items()):
         raise ProbeError("task.fields values must be alias lists")
+    table_terms = aliases_from(task, "table_terms")
+    forbidden_terms = aliases_from(task, "forbidden_terms")
     actions: list[dict[str, Any]] = []
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
@@ -220,7 +245,7 @@ def run_task(html_path: Path, task: dict[str, Any]) -> dict[str, Any]:
             before = observe(page)
             open_navigation(page, task, actions)
             target_terms = aliases_from(task, "target_terms")
-            table_result = visible_table_with_fields(page, fields)
+            table_result = visible_table_with_fields(page, fields, table_terms)
             for _ in range(5):
                 if table_result is not None:
                     break
@@ -238,6 +263,12 @@ def run_task(html_path: Path, task: dict[str, Any]) -> dict[str, Any]:
                 ]
                 if leaf_candidates:
                     candidates = leaf_candidates
+                unsafe_candidates = [
+                    candidate for candidate in candidates if score_name(candidate[2], forbidden_terms)
+                ]
+                if unsafe_candidates and len(unsafe_candidates) == len(candidates):
+                    raise ProbeError(f"target navigation is forbidden: {[candidate[2] for candidate in unsafe_candidates]}")
+                candidates = [candidate for candidate in candidates if candidate not in unsafe_candidates]
                 if candidates:
                     target, name = choose_unique(candidates, "target navigation item")
                 else:
@@ -251,12 +282,14 @@ def run_task(html_path: Path, task: dict[str, Any]) -> dict[str, Any]:
                                 and item.get_attribute("aria-haspopup")
                                 and item.get_attribute("aria-expanded") != "true"
                             ):
-                                expandable.append((1, item, name_of(item)))
+                                name = name_of(item)
+                                if not score_name(name, forbidden_terms):
+                                    expandable.append((1, item, name))
                     target, name = choose_unique(expandable, "expandable navigation item")
                 target.click()
                 actions.append({"type": "press", "target": name, "reason": "semantic navigation"})
                 page.wait_for_timeout(25)
-                table_result = visible_table_with_fields(page, fields)
+                table_result = visible_table_with_fields(page, fields, table_terms)
             if table_result is None:
                 raise ProbeError("no visible table matched task fields after navigation")
             table, mapping = table_result

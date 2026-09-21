@@ -188,8 +188,13 @@ python3 agent-harness/browser_probe.py \
 
 The probe first records the accessible surface and its capabilities, then uses
 role/name based navigation, resolves table columns by aliases, and stops on an
-ambiguous target. The three `qms_variant_*.html` files deliberately change
-menu depth, language, column order, and DOM structure while keeping the same
-task contract. This layer returns records and observations; the queue and
-artifact contract remain separate so an unknown app cannot silently become a
-write-capable connector.
+ambiguous target. `table_terms` must identify the requested table through its
+accessible label, field aliases are one-to-one, and `forbidden_terms` blocks
+destructive-looking targets before any click. The three `qms_variant_*.html`
+files deliberately change menu depth, language, column order, and DOM
+structure while keeping the same task contract. This layer returns records and
+observations; the queue and artifact contract remain separate so an unknown
+app cannot silently become a write-capable connector. It is a browser
+accessibility-tree adapter, not a universal native-app or visual/OCR adapter;
+an app that exposes no reliable labels must stop or receive a dedicated
+adapter.

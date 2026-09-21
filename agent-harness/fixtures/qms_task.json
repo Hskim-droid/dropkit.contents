@@ -13,6 +13,24 @@
     "미처리",
     "open"
   ],
+  "table_terms": [
+    "open issues",
+    "미처리 이슈",
+    "미처리 품질",
+    "outstanding inspection"
+  ],
+  "forbidden_terms": [
+    "delete",
+    "remove",
+    "save",
+    "submit",
+    "approve",
+    "삭제",
+    "제거",
+    "저장",
+    "제출",
+    "승인"
+  ],
   "identity_field": "issue_id",
   "fields": {
     "issue_id": ["issue id", "record id", "id", "이슈번호", "이슈 번호"],
