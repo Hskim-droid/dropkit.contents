@@ -146,3 +146,30 @@ The first proof should be one synthetic QMS page → one DOCX → one validated
 manifest. It should measure record accuracy, evidence coverage, artifact
 re-openability, duplicate suppression, and recovery after a forced stop before
 any live ERP or mail permission is added.
+
+## Run the synthetic browser proof
+
+The fixture is the only adapter included in the public repository. It uses a
+local HTML page, headless Chromium, and a local DOCX renderer; it contains no
+business data or credentials.
+
+```bash
+python3 -m pip install -r agent-harness/requirements-fixture.txt
+python3 -m playwright install chromium
+python3 agent-harness/harness.py init
+```
+
+Set the local, ignored `agent-harness/config.json` value
+`executor.extract` to `fixture-demo`, enqueue one QMS/DOCX job, and run:
+
+```bash
+python3 agent-harness/fixture_demo.py \
+  --config agent-harness/config.json \
+  --job-id JOB_ID \
+  --claim
+```
+
+The command reads `fixtures/qms_daily.html` through Chromium, validates three
+records and their source references, creates one DOCX, reopens it, writes the
+manifest, and moves the queued job to `drafted`. It never sends email or writes
+to an ERP/QMS system.
