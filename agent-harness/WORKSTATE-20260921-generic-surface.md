@@ -11,7 +11,7 @@
   `fixtures/qms_task.json`, `fixtures/qms_variant_*.html`,
   `tests/test_browser_probe.py`, `tests/test_surface_adapter.py`,
   `agent-harness/README.md`.
-- 완료 근거: 18개 unittest 통과, `py_compile`, `git diff --check`, variant 3
+- 완료 근거: 19개 unittest 통과, `py_compile`, `git diff --check`, variant 3
   CLI 실행 확인. 검증 범위는 메뉴 깊이·언어·컬럼 순서·DOM 변화, 미공개 라벨,
   동일 스키마 완료 테이블, 필드 충돌, 금지 메뉴, 중복 ID·산출물 기존 검사를
   포함한다.
