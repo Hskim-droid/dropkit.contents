@@ -23,7 +23,7 @@
   번역의 원문 보존·loopback endpoint·proxy/redirect/cloud guard(서버 재시작
   전제)·잘못된 JSON 중단·translated DOCX 검사를
   포함한다.
-- 공개 커밋: `ea5e515` (`Add host bootstrap and local translation boundary`),
+- 공개 커밋: `bfa0f95` (`Add host bootstrap and local translation boundary`),
   기존 공개 기준은 `f1e8234` (`Document RPA lineage and pin UI actions`), 이전
   native adapter 커밋 `d0b496e`와 generic probe 커밋 `d757efe` 포함. 원격:
   `Hskim-droid/dropkit.contents`.
