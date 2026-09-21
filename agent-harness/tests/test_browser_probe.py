@@ -97,6 +97,15 @@ class BrowserProbeTests(unittest.TestCase):
         finally:
             path.unlink()
 
+    def test_task_requires_table_identity_and_forbidden_action_policy(self):
+        task = json.loads((ROOT / "fixtures" / "qms_task.json").read_text(encoding="utf-8"))
+        for key in ("table_terms", "forbidden_terms"):
+            with self.subTest(key=key):
+                invalid = dict(task)
+                invalid[key] = []
+                with self.assertRaises(browser_probe.ProbeError):
+                    browser_probe.run_task(ROOT / "fixtures" / "qms_variant_1.html", invalid)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -236,6 +236,10 @@ def run_task(html_path: Path, task: dict[str, Any]) -> dict[str, Any]:
         raise ProbeError("task.fields values must be alias lists")
     table_terms = aliases_from(task, "table_terms")
     forbidden_terms = aliases_from(task, "forbidden_terms")
+    if not table_terms:
+        raise ProbeError("task.table_terms must identify the requested table")
+    if not forbidden_terms:
+        raise ProbeError("task.forbidden_terms must declare blocked actions")
     actions: list[dict[str, Any]] = []
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
