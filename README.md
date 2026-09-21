@@ -7,6 +7,29 @@ AI work notes by **Hosang Kim**. I use Codex to build tools for everyday work; C
 - [LinkedIn](https://www.linkedin.com/in/hosang-kim-a0b5a0370/)
 - [GitHub profile](https://github.com/Hskim-droid)
 
+## What this repository contains
+
+This public repository is the site and content hub. It also keeps one experimental
+software project, [`agent-harness`](agent-harness/README.md), so the implementation
+history and the public project page can be reviewed together.
+
+| If you want to… | Start here |
+| --- | --- |
+| Browse the published work and project introductions | [dropkit-contents.pages.dev](https://dropkit-contents.pages.dev/work/) |
+| Run or inspect the local UI-to-document proof | [`agent-harness/README.md`](agent-harness/README.md) |
+| Read the RPA and computer-use reference lineage | [`agent-harness/RPA_REFERENCE_LINEAGE.md`](agent-harness/RPA_REFERENCE_LINEAGE.md) |
+
+`agent-harness` is experimental and fixture-based. Its current proof is
+read/search/draft-first: synthetic UI data can be observed, optionally translated
+through a loopback-only adapter, and rendered as one DOCX, XLSX, or PPTX. The
+public code does not connect to a real ERP/QMS, mail sender, scheduler, browser
+profile, credential, or customer dataset. Real-host permissions, production
+authentication, mail delivery, and unattended write actions remain unverified.
+
+The harness is kept here for provenance while its public boundary is being tested;
+it should not be read as a production RPA product or as permission to automate a
+system merely by cloning this repository.
+
 The home page introduces the person and public projects. External-source summaries remain in the [reading archive](https://dropkit-contents.pages.dev/reading/), with existing post URLs preserved. Repeated AI judgments in older entries are not independent fact verification.
 
 ## Site structure
@@ -29,6 +52,13 @@ Lanes: **deep** (systems) · **scoreboard** (tables). Lab Notes is a writing voi
 
 ```bash
 npm install && npm run dev
+```
+
+To run the harness unit tests without the optional browser and Office fixture
+dependencies:
+
+```bash
+python3 -m unittest discover -s agent-harness/tests -p 'test_*.py'
 ```
 
 ## Publication language

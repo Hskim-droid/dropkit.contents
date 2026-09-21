@@ -1,5 +1,11 @@
 # Codex persona harness
 
+> **Status: experimental proof.** This directory is a software project inside
+> [`dropkit.contents`](../README.md), not a production RPA distribution. The
+> reproducible public path is synthetic UI → optional loopback translation → one
+> DOCX/XLSX/PPTX artifact. Real ERP/QMS, mail, scheduler, unattended writes, and
+> host-specific permissions are outside the verified boundary.
+
 This is a small, cross-platform control plane for the proposed “한결” workflow:
 
 ```text
