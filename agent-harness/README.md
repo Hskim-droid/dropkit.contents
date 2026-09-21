@@ -174,3 +174,22 @@ records and their source references, creates one DOCX, reopens it and compares
 every table cell with the extracted records, writes the manifest, and moves the
 specified queued job to `drafted`. It rejects XLSX/PPTX and non-QMS jobs before
 claiming them. It never sends email or writes to an ERP/QMS system.
+
+## Generic surface probe
+
+`browser_probe.py` is the next adapter boundary. It receives a task contract
+with semantic aliases rather than CSS selectors or a fixed menu path:
+
+```bash
+python3 agent-harness/browser_probe.py \
+  --html agent-harness/fixtures/qms_variant_3.html \
+  --task agent-harness/fixtures/qms_task.json
+```
+
+The probe first records the accessible surface and its capabilities, then uses
+role/name based navigation, resolves table columns by aliases, and stops on an
+ambiguous target. The three `qms_variant_*.html` files deliberately change
+menu depth, language, column order, and DOM structure while keeping the same
+task contract. This layer returns records and observations; the queue and
+artifact contract remain separate so an unknown app cannot silently become a
+write-capable connector.
