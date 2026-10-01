@@ -3,7 +3,7 @@ import Base from '../../layouts/Base.astro';
 import { getCollection, render } from 'astro:content';
 
 export async function getStaticPaths() {
-  const posts = await getCollection('posts', ({ data }) => !data.draft);
+  const posts = await getCollection('posts', ({ data }) => !data.draft && data.approved);
   return posts.map((post) => ({
     params: { slug: post.id },
     props: { post },
@@ -15,10 +15,9 @@ const { Content } = await render(post);
 ---
 <Base title={`${post.data.title} · dropkit.contents`} description={post.data.description}>
   <p class="meta">
-    <a href="/reading/">← Reading</a> · {post.data.pubDate.toISOString().slice(0, 10)}
+    <a href="/notes/">← Notes</a> · {post.data.pubDate.toISOString().slice(0, 10)}
   </p>
   <h1 style="font-size:1.6rem">{post.data.title}</h1>
-  <p class="meta">Reading archive · External-source summary. Repeated AI judgments, including older “robust” labels, are not independent fact verification.</p>
   <div class="prose">
     <Content />
   </div>

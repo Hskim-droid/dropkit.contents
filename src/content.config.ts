@@ -9,6 +9,7 @@ const posts = defineCollection({
     description: z.string().optional(),
     pubDate: z.coerce.date(),
     draft: z.boolean().default(false),
+    approved: z.boolean().default(false),
     lane: z.enum(['deep', 'scoreboard', 'writing']).default('writing'),
     tags: z.array(z.string()).default([]),
   }),

@@ -1,0 +1,10 @@
+---
+import Base from '../../layouts/Base.astro';
+import { services } from '../../lib/catalog';
+---
+<Base title="Services · dropkit" description="Introductions and links to launched services.">
+  <p class="eyebrow">Services</p><h1>Available after launch.</h1>
+  <p>This page will introduce launched services: what they do, who they help, and where to use them.</p>
+  {services.map((service) => <article><h2>{service.title}</h2><p>{service.description}</p><a href={service.url}>Open the service →</a></article>)}
+  {services.length === 0 && <article><h2>No service is listed yet.</h2><p>A service introduction will be added when it is ready to use.</p></article>}
+</Base>

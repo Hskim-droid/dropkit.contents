@@ -1,10 +1,12 @@
 # dropkit.contents
 
-> Public contents ledger. GitHub is the source. This site is the hub.
+> One public hub for reusable AI skills, launched services, and selected notes.
 
-The smallest public unit is one drop: a markdown file under /posts/.
+Only reviewed material is shared. There are no published skills or listed services yet.
 
-- [Drops](https://dropkit-contents.pages.dev/): index
+- [Skills](https://dropkit-contents.pages.dev/skills/)
+- [Services](https://dropkit-contents.pages.dev/services/)
+- [Notes](https://dropkit-contents.pages.dev/notes/)
 - [RSS](https://dropkit-contents.pages.dev/rss.xml)
 - [JSON](https://dropkit-contents.pages.dev/feed.json)
 - [GitHub](https://github.com/Hskim-droid/dropkit.contents)

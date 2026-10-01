@@ -1,0 +1,11 @@
+---
+import Base from '../../layouts/Base.astro';
+import { skills } from '../../lib/catalog';
+---
+<Base title="Skills · dropkit" description="Reusable AI instructions, examples, and downloadable skill packages.">
+  <p class="eyebrow">Skill library</p><h1>Skills you can reuse.</h1>
+  <p>Each published skill will explain its purpose, required tools, and limitations. Read the instructions or download the package.</p>
+  {skills.map((skill) => <article><h2><a href={`/skills/${skill.id}/`}>{skill.title}</a></h2><p>{skill.description}</p><a href={`/skills/${skill.id}/`}>Read and download →</a></article>)}
+  {skills.length === 0 && <article><h2>The first skills are being prepared.</h2><p>Reviewed general-purpose skills will appear here. No package is available yet.</p></article>}
+  <p>Skills are instructions for an AI assistant. Some include supporting scripts or templates; follow the setup notes before using them.</p>
+</Base>

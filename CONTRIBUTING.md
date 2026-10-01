@@ -1,11 +1,14 @@
 # Contributing
 
-Thank you for helping improve this public research and prototype repository.
+Thank you for helping improve this public skills, services, and notes hub.
 
 ## Scope
 
 - Site and content changes belong in the Astro source and publication folders.
 - Kit changes belong in the private `dropkits` repository.
+- Reviewed general-purpose skill sources belong here only after ownership,
+  licensing and publication approval. See skills/README.md.
+- Service introductions are added after launch; service implementation stays private.
 - Keep fixtures synthetic. Do not add real ERP/QMS records, URLs, credentials,
   cookies, screenshots, mail addresses, or customer data.
 - Do not add a live sender, unattended write action, or cloud fallback as a
@@ -17,6 +20,8 @@ Run the checks relevant to the files you changed:
 
 ```bash
 npm ci
+python3 scripts/test_public_catalog.py
+python3 scripts/test_import.py
 npm run build
 git diff --check
 ```
