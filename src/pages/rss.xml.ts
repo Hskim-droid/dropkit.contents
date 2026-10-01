@@ -7,7 +7,7 @@ function esc(s: string) {
 
 export const GET: APIRoute = async ({ site }) => {
   const base = (site?.toString() || 'https://dropkit-contents.pages.dev').replace(/\/$/, '');
-  const posts = (await getCollection('posts', ({ data }) => !data.draft)).sort(
+  const posts = (await getCollection('posts', ({ data }) => !data.draft && data.approved)).sort(
     (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
   );
   const items = posts.map((p) => {
@@ -15,7 +15,7 @@ export const GET: APIRoute = async ({ site }) => {
     const desc = esc(p.data.description || p.data.title);
     return `<item><title>${esc(p.data.title)}</title><link>${link}</link><guid>${link}</guid><pubDate>${p.data.pubDate.toUTCString()}</pubDate><description>${desc}</description></item>`;
   }).join('');
-  const xml = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>dropkit.contents</title><link>${base}/</link><description>Public contents ledger</description>${items}</channel></rss>`;
+  const xml = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>dropkit.contents</title><link>${base}/</link><description>Practical AI notes from the dropkit sharing hub</description>${items}</channel></rss>`;
   return new Response(xml, {
     headers: { 'Content-Type': 'application/rss+xml; charset=utf-8' },
   });

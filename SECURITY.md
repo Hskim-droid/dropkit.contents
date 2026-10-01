@@ -1,6 +1,6 @@
 # Security policy
 
-`dropkit.contents` is a public site and research repository. The kits live in
+`dropkit.contents` is the single public site and skill-sharing repository. Private kits live in
 the private `dropkits` repository; they render files from JSON and are not production ERP, QMS,
 mail, or desktop automation connectors.
 
@@ -27,3 +27,6 @@ are appropriate for non-sensitive bugs and documentation corrections.
 The project is experimental. A successful fixture test does not certify a
 real-host UI permission, credential boundary, model privacy setting, or mail
 delivery path.
+
+Reviewed shared skills may include supporting scripts. Their public approval
+does not authorize execution against real accounts or production systems.

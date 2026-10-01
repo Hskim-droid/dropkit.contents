@@ -3,7 +3,7 @@ import { getCollection } from 'astro:content';
 
 export const GET: APIRoute = async ({ site }) => {
   const base = (site?.toString() || 'https://dropkit-contents.pages.dev').replace(/\/$/, '');
-  const posts = (await getCollection('posts', ({ data }) => !data.draft)).sort(
+  const posts = (await getCollection('posts', ({ data }) => !data.draft && data.approved)).sort(
     (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
   );
   const body = {

@@ -1,0 +1,11 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getCollection } from 'astro:content';
+const posts = (await getCollection('posts', ({ data }) => !data.draft && data.approved)).sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+---
+<Base title="Notes · dropkit" description="Selected practical AI notes and lessons from building.">
+  <p class="eyebrow">Notes</p><h1>What I’m building and learning.</h1>
+  <p>Selected explanations and experiments, with clear descriptions of what was tested and what remains uncertain.</p>
+  {posts.map((post) => <article><h2><a href={`/posts/${post.id}/`}>{post.data.title}</a></h2><p class="meta">{post.data.pubDate.toISOString().slice(0, 10)}</p><p>{post.data.description}</p></article>)}
+  {posts.length === 0 && <p>Notes will appear here as they are ready.</p>}
+</Base>

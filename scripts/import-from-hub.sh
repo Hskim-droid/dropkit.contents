@@ -21,29 +21,44 @@ case "$SLUG" in
     ;;
 esac
 
+if [[ ! "$SLUG" =~ ^[a-z0-9][a-z0-9_-]*$ ]]; then
+  echo "invalid slug: use lowercase letters, digits, underscores or hyphens" >&2
+  exit 2
+fi
+
 if [[ ! -f "$SRC" ]]; then
   echo "missing source: $SRC" >&2
   exit 1
 fi
 
 OUT="$SITE_ROOT/src/content/posts/${SLUG}.md"
-TITLE=$(grep -m1 '^# ' "$SRC" | sed 's/^# //' || echo "$SLUG")
-DATE=$(date +%Y-%m-%d)
-DESC=$(grep -m1 '공통 HW축\|정제된 신호\|결정표' "$SRC" | head -c 160 | tr '\n' ' ' || true)
+python3 - "$SRC" "$OUT" "$SLUG" <<'PY'
+import datetime
+import json
+import sys
+from pathlib import Path
 
-{
-  echo '---'
-  echo "title: $(printf '%s' "$TITLE" | sed 's/"/\\"/g')"
-  echo "description: \"${DESC:-Imported from content-hub}\""
-  echo "pubDate: ${DATE}"
-  echo "draft: false"
-  echo "tags: [local-llm, hardware]"
-  echo '---'
-  echo
-  # drop duplicate H1 if present (layout already shows title)
-  awk 'BEGIN{skip=0} /^# / && skip==0 {skip=1; next} {print}' "$SRC"
-} > "$OUT"
+source, target, slug = sys.argv[1:]
+lines = Path(source).read_text(encoding="utf-8").splitlines()
+title = slug
+for i, line in enumerate(lines):
+    if line.startswith("# "):
+        title = line[2:]
+        del lines[i]
+        break
+description = next((line[:160] for line in lines if any(
+    word in line for word in ("공통 HW축", "정제된 신호", "결정표")
+)), "Imported from content-hub")
+# JSON strings are valid YAML quoted scalars, including colons and quotes.
+header = ["---", "title: " + json.dumps(title, ensure_ascii=False),
+          "description: " + json.dumps(description, ensure_ascii=False),
+          "pubDate: " + datetime.date.today().isoformat(),
+          "draft: true", "tags: [local-llm, hardware]", "---", ""]
+# Exclusive creation preserves existing posts, including during concurrent imports.
+with Path(target).open("x", encoding="utf-8") as output:
+    output.write("\n".join(header + lines) + "\n")
+PY
 
 BYTES=$(wc -c < "$OUT" | tr -d ' ')
 echo "imported $SRC → $OUT ($BYTES bytes)"
-echo "imported $SRC → $OUT ($BYTES bytes). Prefer factory ship-to-dropkit.sh on health-ok runs."
+echo "Draft only. Review the source and frontmatter before setting draft: false."

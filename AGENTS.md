@@ -1,9 +1,8 @@
 # Codex work rules for dropkit.contents
 
-This repository is the public publication and document-content hub. It contains
-Astro publication infrastructure, research notes, project introductions, and
-social/media copies. The kits themselves live in the separate
-the private `dropkits` repository.
+This is the only public repository: a website and sharing hub for reviewed,
+general-purpose AI skills, launched services, and selected notes. Private kit
+and service implementation stays outside this repository.
 
 When Codex starts work here:
 
@@ -15,5 +14,10 @@ When Codex starts work here:
    business data, ERP/QMS records, mail addresses, or local runtime state.
 4. Do not add executable ERP/QMS connectors, mail senders, unattended writes, or
    cloud model fallbacks to this content repository.
-5. For kit changes, work in the private `dropkits` repository and run its own
-   Python checks there.
+5. Only explicitly approved skill sources belong in skills/. Unpublished
+   candidates stay in private staging. Do not assume that removing company
+   names establishes ownership or permission to publish.
+6. Services are listed only after launch and publication approval. News imports
+   remain drafts and cannot become public notes without approved: true.
+7. Run python3 scripts/test_public_catalog.py and python3 scripts/test_import.py.
+   Retired archives must not reappear in generated routes, feeds or assets.

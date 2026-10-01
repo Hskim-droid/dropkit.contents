@@ -1,2 +1,6 @@
-/work/local-llm/ /work/dropkits/ 301
-/work/local-llm /work/dropkits/ 301
+/work/* /skills/ 301
+/work /skills/ 301
+/reading/ /notes/ 301
+/reading /notes/ 301
+/media/ / 301
+/media / 301
