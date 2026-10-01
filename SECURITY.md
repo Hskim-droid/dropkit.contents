@@ -1,9 +1,8 @@
 # Security policy
 
-`dropkit.contents` is a public site and research repository. The related
-[`local-llm/agent-harness`](https://github.com/Hskim-droid/local-llm/tree/main/agent-harness)
-lane is an experimental, draft-first fixture; it is not a production ERP, QMS,
-mail, or desktop automation connector.
+`dropkit.contents` is a public site and research repository. The kits live in
+[`dropkits`](https://github.com/Hskim-droid/dropkits); they render files from JSON and are not production ERP, QMS,
+mail, or desktop automation connectors.
 
 ## Do not publish sensitive material
 
