@@ -3,7 +3,7 @@
 This repository is the public publication and document-content hub. It contains
 Astro publication infrastructure, research notes, project introductions, and
 social/media copies. The kits themselves live in the separate
-[`dropkits`](https://github.com/Hskim-droid/dropkits) repository.
+the private `dropkits` repository.
 
 When Codex starts work here:
 
@@ -15,5 +15,5 @@ When Codex starts work here:
    business data, ERP/QMS records, mail addresses, or local runtime state.
 4. Do not add executable ERP/QMS connectors, mail senders, unattended writes, or
    cloud model fallbacks to this content repository.
-5. For kit changes, work in [`dropkits`](https://github.com/Hskim-droid/dropkits) and run its own
+5. For kit changes, work in the private `dropkits` repository and run its own
    Python checks there.

@@ -1,9 +1,9 @@
 ---
 import Base from '../../layouts/Base.astro';
 ---
-<Base title="dropkits · dropkit" description="Small skills for the AI desktop apps you already use: what each kit makes and how to add one.">
-  <p class="eyebrow">Public project · v1.0.0 · 2026-10-01</p><h1>dropkits</h1>
-  <p>A dropkit is a tiny folder: a <code>SKILL.md</code> the model follows and a short Python renderer that makes the file. Add it to ChatGPT, Claude, or Codex and ask for the result. Nothing to install on your computer.</p>
+<Base title="dropkits · dropkit" description="Small skills for AI desktop apps: what each kit makes and why the work is split between the model and code.">
+  <p class="eyebrow">Personal project · v1.0.0 · 2026-10-01</p><h1>dropkits</h1>
+  <p>A dropkit is a tiny folder: a <code>SKILL.md</code> the model follows and a short Python renderer that makes the file. It runs inside ChatGPT, Claude, or Codex: ask for the result and the kit makes the file. Nothing to install on the computer.</p>
   <h2>Why split the work?</h2><p>The model does the open-ended part: search, read, decide, and fill a JSON file. The Python does the exact part: lay out the spreadsheet, draw the card, add up the quote. The same input gives the same file every time.</p>
   <h2>Kits</h2>
   <ul>
@@ -13,10 +13,7 @@ import Base from '../../layouts/Base.astro';
     <li><strong>verdict</strong>: a decision matrix .xlsx with weighted totals</li>
     <li><strong>quote</strong>: a quote or invoice .pdf, with the math done in Python</li>
   </ul>
-  <h2>Add a kit</h2>
-  <ol><li>Download <code>dropkit-&lt;kit&gt;.zip</code> from the latest release.</li><li>Upload the zip in your app's skills settings.</li><li>Ask for the result in plain words.</li></ol>
-  <p>Apps without skills: attach the kit's files to a chat and say "Follow SKILL.md". Each kit is configured, not coded: change columns, colors, and labels in <code>config.json</code>.</p>
+  <h2>Availability</h2><p>The kits are used in my own work. The source and downloads are kept private; this page describes the approach.</p>
   <h2>Current verification scope</h2><p>Each kit's renderer is checked by an automated test on every change. Output quality still depends on what the model puts into the JSON; review the result before you send or print it.</p>
-  <div class="links"><a href="https://github.com/Hskim-droid/dropkits/releases/latest">Download the kits →</a><a href="https://github.com/Hskim-droid/dropkits">Source on GitHub</a><a href="https://github.com/Hskim-droid/dropkits/issues">Report an issue</a></div>
   <p><a href="/work/">← Public work</a></p>
 </Base>

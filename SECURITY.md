@@ -1,7 +1,7 @@
 # Security policy
 
 `dropkit.contents` is a public site and research repository. The kits live in
-[`dropkits`](https://github.com/Hskim-droid/dropkits); they render files from JSON and are not production ERP, QMS,
+the private `dropkits` repository; they render files from JSON and are not production ERP, QMS,
 mail, or desktop automation connectors.
 
 ## Do not publish sensitive material

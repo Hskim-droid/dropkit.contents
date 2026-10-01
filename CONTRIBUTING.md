@@ -5,7 +5,7 @@ Thank you for helping improve this public research and prototype repository.
 ## Scope
 
 - Site and content changes belong in the Astro source and publication folders.
-- Kit changes belong in [`dropkits`](https://github.com/Hskim-droid/dropkits).
+- Kit changes belong in the private `dropkits` repository.
 - Keep fixtures synthetic. Do not add real ERP/QMS records, URLs, credentials,
   cookies, screenshots, mail addresses, or customer data.
 - Do not add a live sender, unattended write action, or cloud fallback as a
