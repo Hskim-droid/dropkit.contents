@@ -5,7 +5,7 @@ Describe the behavior or documentation change.
 ## Scope
 
 - [ ] Site or content hub
-- [ ] Link or documentation for `local-llm/agent-harness`
+- [ ] Link or documentation for `dropkits`
 - [ ] Public repository operations
 
 ## Verification

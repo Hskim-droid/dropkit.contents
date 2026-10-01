@@ -2,9 +2,8 @@
 
 This repository is the public publication and document-content hub. It contains
 Astro publication infrastructure, research notes, project introductions, and
-social/media copies. The executable local-model engine and UI-to-document
-harness live in the separate [`local-llm`](https://github.com/Hskim-droid/local-llm)
-repository.
+social/media copies. The kits themselves live in the separate
+the private `dropkits` repository.
 
 When Codex starts work here:
 
@@ -16,6 +15,5 @@ When Codex starts work here:
    business data, ERP/QMS records, mail addresses, or local runtime state.
 4. Do not add executable ERP/QMS connectors, mail senders, unattended writes, or
    cloud model fallbacks to this content repository.
-5. For harness or local-model changes, work in
-   [`local-llm`](https://github.com/Hskim-droid/local-llm) and run its own Go and
+5. For kit changes, work in the private `dropkits` repository and run its own
    Python checks there.
