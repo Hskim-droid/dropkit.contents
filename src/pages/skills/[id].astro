@@ -1,16 +1,18 @@
 ---
-import fs from 'node:fs';
+import { getEntry, render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
 import { skills } from '../../lib/catalog';
 export function getStaticPaths() {
   return skills.map((skill) => ({ params: { id: skill.id }, props: { skill } }));
 }
 const { skill } = Astro.props;
-const instructions = fs.readFileSync(`skills/${skill.id}/SKILL.md`, 'utf8');
+const entry = await getEntry('skills', skill.id);
+if (!entry) throw new Error('Missing approved skill instructions');
+const { Content } = await render(entry);
 ---
 <Base title={`${skill.title} · dropkit`} description={skill.description}>
   <a href="/skills/">← Skills</a><h1>{skill.title}</h1><p>{skill.description}</p>
   <div class="links"><a href={`/skills/${skill.id}.zip`} download>Download package (.zip)</a><a href={`/skills/${skill.id}.md`}>Read SKILL.md</a></div>
   <p class="meta">License: {skill.license}. Supporting files and setup notes are included in the package.</p>
-  <pre style="white-space:pre-wrap;overflow-wrap:anywhere">{instructions}</pre>
+  <article class="prose"><Content /></article>
 </Base>

@@ -70,6 +70,21 @@ class CatalogTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.run_fixture(inject)
 
+    def test_draft_note_in_public_sources_is_blocked(self):
+        def inject(root, _):
+            folder = root / 'src/content/posts'
+            folder.mkdir(parents=True)
+            (folder / 'draft.md').write_text('---\napproved: false\ndraft: true\n---\nPrivate candidate')
+        with self.assertRaises(ValueError):
+            self.run_fixture(inject)
+
+    def test_approved_note_is_allowed(self):
+        def inject(root, _):
+            folder = root / 'src/content/posts'
+            folder.mkdir(parents=True)
+            (folder / 'note.md').write_text('---\napproved: true\ndraft: false\n---\nPublic note')
+        self.assertEqual(self.run_fixture(inject), (1, 0))
+
 
 if __name__ == '__main__':
     unittest.main()

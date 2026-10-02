@@ -1,7 +1,7 @@
 # Shared skills
 
-This catalog is part of the single public website repository. No skill is
-published yet. Prepare candidates in private staging before adding them here.
+This catalog is part of the single public website repository. Nightly RPA is
+the first public package. Prepare candidates in private staging before adding them here.
 
 A skill is an instruction package; it may also contain scripts or templates.
 Describe required tools, allowed actions, setup, examples and limitations. Do
@@ -26,5 +26,7 @@ The site creates `/skills/<id>/`, `/skills/<id>.md`, and `/skills/<id>.zip`.
 The package includes its license. A skill-specific license governs that skill;
 the site's default content terms do not automatically permit skill reuse.
 
-The nightly automation skill is only a possible future candidate. Its public
-version, provenance review, and publication approval have not been established.
+The public Nightly RPA edition contains new generic instructions and a synthetic,
+offline demonstration. It does not contain a company-specific connector or
+implement production scheduling. Its declared source files and license are in
+nightly-rpa/ and catalog.json.

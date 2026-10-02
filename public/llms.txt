@@ -2,7 +2,9 @@
 
 > One public hub for reusable AI skills, launched services, and selected notes.
 
-Only reviewed material is shared. There are no published skills or listed services yet.
+Only reviewed material is shared. Nightly RPA is the first shared skill; no service is listed yet.
+
+- [Nightly RPA](https://dropkit-contents.pages.dev/skills/nightly-rpa/)
 
 - [Skills](https://dropkit-contents.pages.dev/skills/)
 - [Services](https://dropkit-contents.pages.dev/services/)

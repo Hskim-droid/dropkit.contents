@@ -1,5 +1,5 @@
 #!/bin/bash
-# Import a content-hub export into dropkit.contents posts.
+# Import a content-hub export into private staging, outside this public checkout.
 # Usage: bash scripts/import-from-hub.sh <slug> [source_md]
 #   slug: hw_fit | refinery-YYYY-MM-DD | custom
 #   source_md: optional path; default by slug
@@ -7,6 +7,7 @@ set -euo pipefail
 
 SITE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 HUB="${CT_CONTENT_HUB:?set CT_CONTENT_HUB to the factory tree}"
+STAGING="${CT_PRIVATE_STAGING:?set CT_PRIVATE_STAGING to an absolute private directory outside this checkout}"
 SLUG="${1:?slug required (e.g. hw_fit)}"
 SRC="${2:-}"
 
@@ -31,14 +32,25 @@ if [[ ! -f "$SRC" ]]; then
   exit 1
 fi
 
-OUT="$SITE_ROOT/src/content/posts/${SLUG}.md"
-python3 - "$SRC" "$OUT" "$SLUG" <<'PY'
+python3 - "$SRC" "$STAGING" "$SLUG" "$SITE_ROOT" <<'PY'
 import datetime
 import json
+import os
 import sys
 from pathlib import Path
 
-source, target, slug = sys.argv[1:]
+source, staging, slug, site = sys.argv[1:]
+folder = Path(staging)
+if not folder.is_absolute():
+    raise SystemExit('Private staging must be an absolute path')
+folder = folder.resolve()
+site = Path(site).resolve()
+if folder == site or site in folder.parents:
+    raise SystemExit('Private staging cannot be inside the public checkout')
+folder.mkdir(parents=True, exist_ok=True, mode=0o700)
+if folder.stat().st_mode & 0o077:
+    raise SystemExit('Private staging must restrict access to its owner (mode 700)')
+target = folder / (slug + '.md')
 lines = Path(source).read_text(encoding="utf-8").splitlines()
 title = slug
 for i, line in enumerate(lines):
@@ -53,12 +65,12 @@ description = next((line[:160] for line in lines if any(
 header = ["---", "title: " + json.dumps(title, ensure_ascii=False),
           "description: " + json.dumps(description, ensure_ascii=False),
           "pubDate: " + datetime.date.today().isoformat(),
-          "draft: true", "tags: [local-llm, hardware]", "---", ""]
+          "draft: true", "approved: false", "tags: [local-llm, hardware]", "---", ""]
 # Exclusive creation preserves existing posts, including during concurrent imports.
-with Path(target).open("x", encoding="utf-8") as output:
+fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+with os.fdopen(fd, "w", encoding="utf-8") as output:
     output.write("\n".join(header + lines) + "\n")
+print('Private draft created: ' + str(target))
 PY
 
-BYTES=$(wc -c < "$OUT" | tr -d ' ')
-echo "imported $SRC → $OUT ($BYTES bytes)"
-echo "Draft only. Review the source and frontmatter before setting draft: false."
+echo "Review in private staging. Only approved, non-draft notes may be copied into the public checkout."
