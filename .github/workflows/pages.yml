@@ -25,6 +25,8 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
+      - run: python3 -m unittest discover -s scripts -p 'test_*.py'
+      - run: npm audit --audit-level=high
       - run: npm run build
       - run: node scripts/build-github-pages.mjs
       - uses: actions/upload-pages-artifact@v5

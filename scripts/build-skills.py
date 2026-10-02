@@ -7,7 +7,20 @@ from urllib.parse import urlparse
 
 
 def build(root):
-    root = Path(root)
+    root = Path(root).resolve()
+    # Public Git sources are readable even if an HTML route is hidden.
+    notes = root / 'src/content/posts'
+    for note in notes.rglob('*.md') if notes.exists() else []:
+        if note.is_symlink() or any(p.is_symlink() for p in note.parents):
+            raise ValueError('Public notes cannot be symlinks')
+        text = note.read_text()
+        if not text.startswith('---\n') or '\n---\n' not in text[4:]:
+            raise ValueError('Public note requires frontmatter')
+        header = text[4:].split('\n---\n', 1)[0]
+        for field, required in [('approved', 'true'), ('draft', 'false')]:
+            values = re.findall(r'^' + field + r':\s*(.*?)\s*$', header, re.M)
+            if values != [required]:
+                raise ValueError('Unapproved notes must remain in private staging')
     entries = json.loads((root / 'skills/catalog.json').read_text())['skills']
     ids = set()
     planned = []
@@ -62,8 +75,10 @@ def build(root):
         if not service.get('title') or not service.get('description'):
             raise ValueError('Service title and description required')
     output = root / 'public/skills'
+    if any(p.is_symlink() for p in (output, *output.parents)):
+        raise ValueError('Public download output cannot use symlinks')
     allowed = {f'{sid}{ext}' for sid in ids for ext in ('.zip', '.md')}
-    if output.exists() and any(p.name not in allowed for p in output.iterdir()):
+    if output.exists() and any(p.is_symlink() or not p.is_file() or p.name not in allowed for p in output.iterdir()):
         raise ValueError('Unlisted public download found; retire it before building')
     output.mkdir(parents=True, exist_ok=True)
     for entry, folder in planned:

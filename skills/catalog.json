@@ -1,1 +1,13 @@
-{"skills": []}
+{"skills": [{
+  "id": "nightly-rpa",
+  "title": "Nightly RPA",
+  "description": "Build repeatable automation with manifests, verification and clear run reports. Includes an offline Python demonstration.",
+  "license": "MIT",
+  "provenance": "New public edition written for this personal repository on 2026-10-02 under the owner's instruction to publish general-purpose skills. No employer-specific files or procedures copied; demonstration data is synthetic.",
+  "files": ["SKILL.md", "LICENSE", "scripts/demo.py"],
+  "ownershipConfirmed": true,
+  "generalizationReviewed": true,
+  "syntheticExamplesOnly": true,
+  "publicationApproved": true,
+  "companyDerived": false
+}]}

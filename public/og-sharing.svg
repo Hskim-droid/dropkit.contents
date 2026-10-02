@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#fafafa"/>
+  <rect x="64" y="68" width="12" height="494" fill="#0369a1"/>
+  <g fill="#111111" font-family="Helvetica,Arial,sans-serif">
+    <text x="112" y="123" font-size="32" font-weight="700">dropkit</text>
+    <text x="112" y="267" font-size="76" font-weight="700">Useful skills.</text>
+    <text x="112" y="355" font-size="76" font-weight="700">Services and notes.</text>
+    <text x="112" y="463" font-size="29" fill="#5f6368">Reusable AI skills · Launched services · Practical notes</text>
+    <text x="112" y="535" font-size="27" fill="#0369a1">Hosang Kim · dropkit-contents.pages.dev</text>
+  </g>
+</svg>

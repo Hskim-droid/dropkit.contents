@@ -24,8 +24,14 @@ npm run dev
 
 `npm run build` requires Python 3 and validates the catalogs before building.
 Published skills get a reading page, a standalone SKILL.md, and a ZIP package.
-There are currently no published skills or listed services. Empty catalogs do
-not claim that a service has launched or a package is available.
+The first skill, Nightly RPA, includes an offline Python demonstration. There
+are no listed services yet; a service is listed only after launch.
+
+Imports require CT_CONTENT_HUB and CT_PRIVATE_STAGING. The latter must be an
+absolute owner-only directory outside this checkout. Imports write private
+drafts there; the public build rejects any note lacking literal approved: true
+and draft: false frontmatter. Never commit an unreviewed candidate to any branch
+of this public repository: CI cannot retract a source file already pushed.
 
 Only this repository is public. Service code, private kits, employer-specific
 materials, and unpublished candidates stay in private repositories or staging.

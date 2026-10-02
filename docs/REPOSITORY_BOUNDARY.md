@@ -23,13 +23,16 @@ symlinks, residual company/host strings, and unlisted download assets. These
 checks enforce recorded decisions; they do not prove ownership or identify all
 sensitive information. Human review precedes the public commit, not just build.
 
-Private candidates must not be committed here even as drafts. The skill catalog
-currently contains no entries. Company-specific kits and internal reporting,
+Private candidates must not be committed here even as drafts. Nightly RPA is a
+new public instruction package with synthetic offline examples. Company-specific kits and internal reporting,
 meeting and writing procedures remain outside the public sharing hub.
 
 ## Notes and history
 
-Notes require both approved: true and draft: false to render or enter feeds.
+Imports write into an explicitly configured owner-only private directory outside
+this checkout. Public note sources require literal approved: true and draft:
+false frontmatter; the build rejects other states. Rendering and feeds also use
+those two conditions. CI cannot make a source file private once pushed.
 Previously published news, media and project content was retired from current
 source and build. Earlier public Git history and third-party copies remain.
 

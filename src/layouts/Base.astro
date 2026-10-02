@@ -16,7 +16,10 @@ const {
     <link rel="alternate" type="application/json" title="JSON feed" href="/feed.json" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:image" content="https://dropkit-contents.pages.dev/og.png" />
+    <meta property="og:image" content="https://dropkit-contents.pages.dev/og-sharing.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:url" content={Astro.url.href} />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="canonical" href={Astro.url.href} />
@@ -86,6 +89,7 @@ const {
         text-align: left;
       }
       .prose code { font-size: 0.9em; }
+      .prose pre { overflow-x: auto; padding: 1rem; border-radius: 8px; }
       footer {
         margin-top: 3rem;
         color: var(--muted);
@@ -119,7 +123,7 @@ const {
       <slot />
       <footer>
         <p>Hosang Kim · dropkit</p>
-        <div class="links"><a href="https://www.linkedin.com/in/hosang-kim-a0b5a0370/">LinkedIn</a><a href="https://github.com/Hskim-droid/dropkit.contents">Site and shared skills on GitHub</a><a href="/rss.xml">RSS</a></div>
+        <div class="links"><a href="https://www.linkedin.com/in/hosang-kim-a0b5a0370/">LinkedIn</a><a href="https://github.com/Hskim-droid/dropkit.contents">Site and shared skills on GitHub</a><a href="https://github.com/Hskim-droid/dropkit.contents/issues/new">Report an issue</a><a href="/rss.xml">RSS</a></div>
       </footer>
     </main>
   </body>

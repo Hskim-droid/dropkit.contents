@@ -17,7 +17,8 @@ When Codex starts work here:
 5. Only explicitly approved skill sources belong in skills/. Unpublished
    candidates stay in private staging. Do not assume that removing company
    names establishes ownership or permission to publish.
-6. Services are listed only after launch and publication approval. News imports
-   remain drafts and cannot become public notes without approved: true.
+6. Services are listed only after launch and publication approval. Imports go to
+   private staging outside this checkout. Only reviewed notes with approved:
+   true and draft: false belong in public sources, including PR branches.
 7. Run python3 scripts/test_public_catalog.py and python3 scripts/test_import.py.
    Retired archives must not reappear in generated routes, feeds or assets.

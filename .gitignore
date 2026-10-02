@@ -1,6 +1,7 @@
 node_modules/
 dist/
 dist-github-pages/
+public/skills/
 .astro/
 .wrangler/
 .DS_Store
