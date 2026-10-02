@@ -27,7 +27,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: node scripts/build-github-pages.mjs
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: dist-github-pages
 
