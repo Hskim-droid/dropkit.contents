@@ -22,3 +22,7 @@ When Codex starts work here:
    true and draft: false belong in public sources, including PR branches.
 7. Run python3 scripts/test_public_catalog.py and python3 scripts/test_import.py.
    Retired archives must not reappear in generated routes, feeds or assets.
+
+8. Write audience-facing articles, titles, summaries, tags, and public skill or
+   service descriptions in English. Preserve original source URLs and factual
+   limits when translating. Internal source records may retain their language.
