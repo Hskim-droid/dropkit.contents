@@ -1,5 +1,6 @@
 ---
 title: "API price notes: Claude Opus 5.5, Gemini 3.8 Flash, and Grok 4.7"
+description: "Provider-published API token prices checked on October 2, 2026, with an arithmetic cost illustration and limits on comparisons of total application cost."
 pubDate: 2026-10-02
 draft: false
 approved: true

@@ -1,5 +1,6 @@
 ---
 title: "What Counts as Success in AI Automation?"
+description: "A research hypothesis for evaluating AI automation through outcomes, provenance, and safe retries, with explicit limits on what the evidence establishes."
 pubDate: 2026-10-08
 draft: false
 approved: true

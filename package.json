@@ -7,10 +7,11 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "prebuild": "python3 scripts/build-skills.py",
+    "prebuild": "python3 scripts/build-skills.py && python3 scripts/check-article-metadata.py",
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "postbuild": "python3 scripts/check-rendered-metadata.py"
   },
   "dependencies": {
     "astro": "^7.3.5"
