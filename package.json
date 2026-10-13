@@ -14,6 +14,6 @@
     "postbuild": "python3 scripts/check-rendered-metadata.py"
   },
   "dependencies": {
-    "astro": "^7.3.5"
+    "astro": "^7.3.8"
   }
 }
